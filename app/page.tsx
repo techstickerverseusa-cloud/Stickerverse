@@ -1,4 +1,3 @@
-import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { getAllCollections } from "@/lib/shopify-collections";
@@ -16,25 +15,103 @@ export default async function HomePage() {
 
   return (
     <AnimatedClientWrapper>
-      <main className="bg-[#060608] text-white min-h-screen w-full selection:bg-indigo-500 selection:text-white overflow-x-hidden">
+      <main className="text-white min-h-screen w-full selection:bg-indigo-500 selection:text-white overflow-x-hidden">
         
         {/* ══════════════════════════════════════════
             HERO SECTION
            ══════════════════════════════════════════ */}
         <section className="relative min-h-[96vh] flex flex-col items-center justify-center text-center py-20 px-4 overflow-hidden">
-          <div className="absolute inset-0 -z-10 pointer-events-none">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1200px] h-[600px] bg-[radial-gradient(ellipse_at_top,rgba(90,70,210,0.22),transparent_60%)]" />
-            <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(50,30,140,0.12),transparent_70%)]" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[radial-gradient(circle,rgba(90,70,200,0.04),transparent_65%)]" />
-          </div>
 
-          <div 
-            className="absolute inset-0 -z-10 opacity-[0.025] pointer-events-none"
-            style={{
-              backgroundImage: "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
-              backgroundSize: "60px 60px",
-            }}
-          />
+          {/* ── Animated background layer ── */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+
+            {/* Central breathing orb */}
+            <div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full animate-pulse-glow"
+              style={{ background: "radial-gradient(circle, rgba(90,70,210,0.18) 0%, rgba(60,40,180,0.06) 45%, transparent 70%)" }}
+            />
+
+            {/* Top gradient arc */}
+            <div
+              className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] rounded-full animate-pulse-glow-2"
+              style={{
+                background: "radial-gradient(ellipse at top, rgba(100,80,230,0.22) 0%, transparent 65%)",
+                animationDelay: "1s",
+              }}
+            />
+
+            {/* Floating orb — top-left */}
+            <div
+              className="absolute top-[12%] left-[8%] w-64 h-64 rounded-full animate-float"
+              style={{
+                background: "radial-gradient(circle, rgba(80,60,200,0.14) 0%, transparent 70%)",
+                animationDuration: "7s",
+              }}
+            />
+
+            {/* Floating orb — top-right */}
+            <div
+              className="absolute top-[8%] right-[10%] w-48 h-48 rounded-full animate-float-2"
+              style={{
+                background: "radial-gradient(circle, rgba(120,90,255,0.12) 0%, transparent 70%)",
+                animationDelay: "1.5s",
+              }}
+            />
+
+            {/* Floating orb — bottom-left */}
+            <div
+              className="absolute bottom-[15%] left-[12%] w-56 h-56 rounded-full animate-float"
+              style={{
+                background: "radial-gradient(circle, rgba(60,40,160,0.12) 0%, transparent 70%)",
+                animationDuration: "9s",
+                animationDelay: "2s",
+              }}
+            />
+
+            {/* Floating orb — bottom-right */}
+            <div
+              className="absolute bottom-[10%] right-[8%] w-72 h-72 rounded-full animate-float-2"
+              style={{
+                background: "radial-gradient(circle, rgba(100,70,220,0.1) 0%, transparent 70%)",
+                animationDelay: "0.8s",
+                animationDuration: "11s",
+              }}
+            />
+
+            {/* Slow rotating conic ring */}
+            <div
+              className="absolute top-1/2 left-1/2 w-[600px] h-[600px] rounded-full opacity-[0.04] animate-rotate-slow"
+              style={{
+                background: "conic-gradient(from 0deg, transparent 0%, rgba(120,100,255,1) 15%, transparent 30%, transparent 70%, rgba(80,60,200,1) 85%, transparent 100%)",
+              }}
+            />
+
+            {/* Twinkle stars */}
+            {[
+              { top: "18%", left: "22%",  size: 3, delay: "0s",    dur: "2.5s" },
+              { top: "30%", left: "78%",  size: 2, delay: "0.8s",  dur: "3.2s" },
+              { top: "65%", left: "15%",  size: 2, delay: "1.4s",  dur: "2.8s" },
+              { top: "72%", left: "82%",  size: 3, delay: "0.3s",  dur: "3.8s" },
+              { top: "45%", left: "90%",  size: 2, delay: "2.1s",  dur: "2.2s" },
+              { top: "15%", left: "55%",  size: 2, delay: "1.7s",  dur: "3.5s" },
+              { top: "85%", left: "45%",  size: 3, delay: "0.6s",  dur: "2.9s" },
+              { top: "55%", left: "5%",   size: 2, delay: "2.5s",  dur: "3.1s" },
+            ].map((s, i) => (
+              <div
+                key={i}
+                className="absolute rounded-full bg-white animate-twinkle"
+                style={{
+                  top: s.top, left: s.left,
+                  width: s.size, height: s.size,
+                  animationDelay: s.delay,
+                  animationDuration: s.dur,
+                }}
+              />
+            ))}
+
+            {/* Bottom fade-out */}
+            <div className="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-[#060608] to-transparent" />
+          </div>
 
           <div className="flex flex-col items-center w-full max-w-4xl mx-auto z-10">
             
@@ -125,24 +202,25 @@ export default async function HomePage() {
             CATEGORIES SECTION
            ══════════════════════════════════════════ */}
         <section id="categories" className="px-4 sm:px-6 lg:px-8 py-28 max-w-[1400px] mx-auto scroll-mt-10">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-16 border-b border-white/[0.05] pb-6">
-            <div>
-              <p
-                className="text-[10px] tracking-[0.4em] uppercase text-indigo-400 font-semibold mb-2"
-                style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
-              >
-                Browse Multiverse
-              </p>
-              <h2
-                className="text-3xl md:text-4xl font-black text-white uppercase mt-4"
-                style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
-              >
-                Product Categories
-              </h2>
-            </div>
+          <div className="text-center mb-16 space-y-3">
+            <p
+              className="text-[10px] tracking-[0.45em] uppercase text-indigo-400 font-semibold"
+              style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
+            >
+              Browse Multiverse
+            </p>
+            <h2
+              className="text-3xl md:text-5xl font-black uppercase tracking-tight"
+              style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
+            >
+              <span className="text-white">Product </span>
+              <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                Categories
+              </span>
+            </h2>
             {collections.length > 0 && (
-              <p className="text-xs text-zinc-500 tracking-wider font-mono">
-                // {collections.length} {collections.length === 1 ? "category" : "categories"} loaded
+              <p className="text-xs text-zinc-600 tracking-wider font-mono">
+                // {collections.length} {collections.length === 1 ? "category" : "categories"} available
               </p>
             )}
           </div>
@@ -151,54 +229,101 @@ export default async function HomePage() {
             <p className="text-zinc-500 text-center py-20 font-medium">No categories found at the moment.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {collections.map((col) => (
+              {collections.map((col, idx) => (
                 <Link
                   key={col.id}
                   href={`/collections/${col.handle}`}
-                  className="group relative flex flex-col overflow-hidden border border-white/[0.05] bg-[#0c0c0e] hover:border-white/[0.15] transition-all duration-500 rounded-xl"
+                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015] hover:border-indigo-500/25 transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_24px_48px_rgba(80,60,200,0.10)] animate-fade-up"
+                  style={{ animationDelay: `${idx * 80}ms`, animationFillMode: "both" }}
                 >
-                  <div className="relative aspect-[4/3] overflow-hidden bg-zinc-900">
+                  {/* Image */}
+                  <div className="relative aspect-video overflow-hidden">
                     {col.image ? (
                       <Image
                         src={col.image.url}
                         alt={col.image.altText ?? col.title}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out grayscale-[20%] group-hover:grayscale-0"
+                        className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out grayscale-[15%] group-hover:grayscale-0"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-900 to-black">
+                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-indigo-950/40 to-zinc-900">
                         <span
-                          className="text-8xl font-black text-white/[0.02] select-none"
+                          className="text-9xl font-black text-white/[0.03] select-none"
                           style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
                         >
                           {col.title.charAt(0)}
                         </span>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0e] via-transparent to-transparent opacity-90" />
+
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#060608] via-[#060608]/20 to-transparent" />
+
+                    {/* Number badge */}
+                    <div
+                      className="absolute top-3 left-3.5 text-[9px] font-bold text-white/25 tracking-[0.25em]"
+                      style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
+                    >
+                      {String(idx + 1).padStart(2, "0")}
+                    </div>
+
+                    {/* Browse overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="border border-white/25 px-5 py-2 backdrop-blur-sm translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                        <span
+                          className="text-[9px] tracking-[0.4em] uppercase text-white"
+                          style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
+                        >
+                          Browse Collection
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="p-6 flex items-center justify-between gap-4 z-10 bg-[#0c0c0e]">
-                    <div className="min-w-0 flex-1">
+                  {/* Content */}
+                  <div className="p-5 flex flex-col gap-3 flex-1">
+                    <div className="flex items-start justify-between gap-3">
                       <h3
-                        className="text-sm font-bold tracking-[0.1em] uppercase text-zinc-200 group-hover:text-white transition-colors duration-200 truncate"
+                        className="text-xs font-bold tracking-[0.12em] uppercase text-zinc-200 group-hover:text-white transition-colors duration-300 leading-relaxed"
                         style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
                       >
                         {col.title}
                       </h3>
-                      {col.description && (
-                        <p className="text-zinc-500 text-xs mt-1.5 line-clamp-1 leading-relaxed font-normal">
-                          {col.description}
-                        </p>
-                      )}
+                      <div className="flex-shrink-0 w-7 h-7 rounded border border-white/[0.08] flex items-center justify-center text-zinc-600 group-hover:border-indigo-400/35 group-hover:text-indigo-400 group-hover:bg-indigo-500/[0.05] transition-all duration-300 mt-0.5">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                          className="group-hover:translate-x-0.5 transition-transform duration-200">
+                          <path d="m5 12 14 0M13 6l6 6-6 6" />
+                        </svg>
+                      </div>
                     </div>
-                    <div className="flex-shrink-0 w-9 h-9 rounded-lg border border-white/[0.06] flex items-center justify-center text-zinc-500 bg-zinc-900/50 group-hover:border-indigo-500/40 group-hover:text-indigo-400 group-hover:bg-indigo-500/[0.04] transition-all duration-300">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="group-hover:translate-x-0.5 transition-transform duration-200">
-                        <path d="m5 12 14 0M13 6l6 6-6 6" />
-                      </svg>
+
+                    {col.description ? (
+                      <p className="text-zinc-500 text-xs leading-relaxed line-clamp-3 group-hover:text-zinc-300 transition-colors duration-300">
+                        {col.description}
+                      </p>
+                    ) : (
+                      <p className="text-zinc-600 text-xs leading-relaxed italic">
+                        Explore our curated collection of premium stickers and custom prints.
+                      </p>
+                    )}
+
+                    {/* Animated bottom accent */}
+                    <div className="mt-auto pt-3 flex items-center gap-2 border-t border-white/[0.04]">
+                      <div className="h-px flex-1 bg-white/[0.04] relative overflow-hidden">
+                        <div className="absolute inset-y-0 left-0 w-0 group-hover:w-full bg-gradient-to-r from-indigo-500/50 to-transparent transition-all duration-500 ease-out" />
+                      </div>
+                      <span
+                        className="text-[9px] tracking-[0.3em] uppercase text-zinc-600 group-hover:text-indigo-400 transition-colors duration-300"
+                        style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
+                      >
+                        Explore
+                      </span>
                     </div>
                   </div>
+
+                  {/* Top gradient accent */}
+                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/0 to-transparent group-hover:via-indigo-400/45 transition-all duration-700" />
                 </Link>
               ))}
             </div>
@@ -208,7 +333,7 @@ export default async function HomePage() {
         {/* ══════════════════════════════════════════
             BUILT DIFFERENT (FEATURES) SECTION
            ══════════════════════════════════════════ */}
-        <section className="relative py-28 px-4 sm:px-6 lg:px-8 bg-[#0a0a0c] overflow-hidden">
+        <section className="relative py-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
           <div className="absolute inset-0 pointer-events-none -z-10">
             {/* এখানে ভুল w-150 এবং h-150 ক্লাস পরিবর্তন করে ভ্যালিড Tailwind রেস্পন্সিভ রেম দেওয়া হয়েছে */}
             <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 md:w-[600px] md:h-[600px] bg-indigo-500/5 blur-[130px] rounded-full" />
@@ -285,7 +410,7 @@ export default async function HomePage() {
            ══════════════════════════════════════════ */}
         <section className="px-4 sm:px-6 lg:px-8 pb-28">
           <div className="max-w-[1400px] mx-auto">
-            <div className="relative border border-white/[0.06] rounded-2xl p-10 md:p-20 text-center overflow-hidden bg-[#09090b]">
+            <div className="relative border border-white/[0.06] rounded-2xl p-10 md:p-20 text-center overflow-hidden bg-white/[0.02]">
               <div className="absolute inset-0 -z-10 pointer-events-none"
                 style={{ background: "radial-gradient(ellipse 70% 70% at 50% 50%, rgba(79,70,229,0.15) 0%, transparent 75%)" }}
               />

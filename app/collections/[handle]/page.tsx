@@ -73,7 +73,7 @@ export default async function CollectionPage({ params }: Props) {
           {/* Description */}
           {collection.description && (
             <p
-              className="text-gray-400 mt-6 max-w-lg text-sm leading-7 animate-fade-up delay-150"
+              className="text-gray-400 mt-6 w-full max-w-3xl text-sm leading-7 animate-fade-up delay-150"
               style={{ animationFillMode: "both" }}
             >
               {collection.description}

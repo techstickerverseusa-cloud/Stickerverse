@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart-store";
 import type { CartItem } from "@/lib/cart-types";
 
@@ -11,6 +12,7 @@ function fmt(n: number) {
 
 export default function CartPage() {
   const { items, removeItem, updateQty, subtotal, total, itemCount, isHydrated, clearCart } = useCart();
+  const router = useRouter();
 
   if (!isHydrated) {
     return (
@@ -140,9 +142,9 @@ export default function CartPage() {
             </div>
 
             <button
-              className="w-full text-xs font-bold py-4 tracking-[0.2em] uppercase hover:opacity-90 transition-all duration-200 mb-4"
+              className="w-full text-xs font-bold py-4 tracking-[0.2em] uppercase hover:opacity-90 active:scale-[0.99] transition-all duration-200 mb-4"
               style={{ fontFamily: "var(--font-orbitron)", background: "#ffffff", color: "#000000" }}
-              onClick={() => alert("Checkout flow coming soon!")}
+              onClick={() => router.push("/checkout")}
             >
               Proceed to Checkout →
             </button>

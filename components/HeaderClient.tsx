@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import CartIcon from "./CartIcon";
@@ -19,6 +19,8 @@ export default function HeaderClient({
   const [productsOpen, setProductsOpen] = useState(false);
   const [accountOpen, setAccountOpen]   = useState(false);
   const [scrolled, setScrolled]         = useState(false);
+  const productsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const accountTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router   = useRouter();
   const pathname = usePathname();
 
@@ -39,6 +41,18 @@ export default function HeaderClient({
     setProductsOpen(false);
     setAccountOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    return () => {
+      if (productsTimer.current) clearTimeout(productsTimer.current);
+      if (accountTimer.current)  clearTimeout(accountTimer.current);
+    };
+  }, []);
+
+  function openProducts() { if (productsTimer.current) clearTimeout(productsTimer.current); setProductsOpen(true); }
+  function closeProducts() { productsTimer.current = setTimeout(() => setProductsOpen(false), 150); }
+  function openAccount()  { if (accountTimer.current)  clearTimeout(accountTimer.current);  setAccountOpen(true); }
+  function closeAccount() { accountTimer.current  = setTimeout(() => setAccountOpen(false), 150); }
 
   async function handleLogout() {
     setAccountOpen(false);
@@ -93,8 +107,8 @@ export default function HeaderClient({
           {/* Products dropdown */}
           <div
             className="relative"
-            onMouseEnter={() => setProductsOpen(true)}
-            onMouseLeave={() => setProductsOpen(false)}
+            onMouseEnter={openProducts}
+            onMouseLeave={closeProducts}
           >
             <button
               className={`flex items-center gap-1.5 text-[13px] tracking-wide transition-colors duration-200 py-1 ${
@@ -152,8 +166,8 @@ export default function HeaderClient({
             {customer ? (
               <div
                 className="relative"
-                onMouseEnter={() => setAccountOpen(true)}
-                onMouseLeave={() => setAccountOpen(false)}
+                onMouseEnter={openAccount}
+                onMouseLeave={closeAccount}
               >
                 <button className="flex items-center gap-2.5 group">
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 border border-white/20 text-white text-xs font-bold group-hover:bg-white group-hover:text-black transition-all duration-200">

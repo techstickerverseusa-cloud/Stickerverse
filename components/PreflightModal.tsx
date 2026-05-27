@@ -1,0 +1,491 @@
+"use client";
+
+import { useState, useEffect } from "react";
+
+export type BorderThickness = "thin" | "normal" | "wide";
+export type ShapeId = "die-cut" | "circle" | "oval" | "square" | "rectangle";
+export type FitMode = "fill" | "fit" | "edge";
+export type RoundedCorners = "none" | "soft" | "medium" | "heavy";
+
+export interface ProofResult {
+  processedUrl: string;
+  originalUrl: string;
+  shopifyUrl: string | null;
+  borderThickness: BorderThickness;
+  removedBackground: boolean;
+  shape: ShapeId;
+  fitMode: FitMode;
+  roundedCorners: RoundedCorners;
+}
+
+interface Props {
+  file: File;
+  initialShape: ShapeId;
+  material: string;
+  onApprove: (proof: ProofResult) => void;
+  onClose: (changeNote?: string) => void;
+}
+
+const BORDER_PX: Record<BorderThickness, number> = { thin: 2, normal: 4, wide: 8 };
+const RADIUS_MAP: Record<RoundedCorners, string> = {
+  none: "0px",
+  soft: "10px",
+  medium: "24px",
+  heavy: "60px",
+};
+
+function cutlineFilter(t: BorderThickness): string {
+  const d = BORDER_PX[t];
+  const d2 = Math.round(d * 0.7);
+  const c = "#00ff44";
+  return [
+    `drop-shadow(${d}px 0 0 ${c})`, `drop-shadow(-${d}px 0 0 ${c})`,
+    `drop-shadow(0 ${d}px 0 ${c})`, `drop-shadow(0 -${d}px 0 ${c})`,
+    `drop-shadow(${d2}px ${d2}px 0 ${c})`, `drop-shadow(-${d2}px -${d2}px 0 ${c})`,
+    `drop-shadow(${d2}px -${d2}px 0 ${c})`, `drop-shadow(-${d2}px ${d2}px 0 ${c})`,
+  ].join(" ");
+}
+
+function ShapeIcon({ id, size = 20 }: { id: ShapeId; size?: number }) {
+  const sw = 1.5;
+  switch (id) {
+    case "die-cut":
+      return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={sw}><path d="M4 2L14 1L22 6L23 15L18 22L8 23L1 17L2 8Z" strokeLinejoin="round" /></svg>;
+    case "circle":
+      return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={sw}><circle cx="12" cy="12" r="10" /></svg>;
+    case "oval":
+      return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={sw}><ellipse cx="12" cy="12" rx="7" ry="10" /></svg>;
+    case "square":
+      return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={sw}><rect x="3" y="3" width="18" height="18" /></svg>;
+    case "rectangle":
+      return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={sw}><rect x="2" y="6" width="20" height="12" /></svg>;
+  }
+}
+
+function getContainerSize(shape: ShapeId, zoom: number): { w: number; h: number } {
+  const base = 220 * zoom;
+  switch (shape) {
+    case "circle":
+    case "square":
+    case "die-cut": return { w: base, h: base };
+    case "oval":    return { w: base * 0.72, h: base };
+    case "rectangle": return { w: base * 1.45, h: base };
+  }
+}
+
+function getClipStyle(shape: ShapeId, fitMode: FitMode, rc: RoundedCorners): React.CSSProperties {
+  if (fitMode === "edge") return {};
+  switch (shape) {
+    case "circle":    return { borderRadius: "50%" };
+    case "oval":      return { borderRadius: "50% / 40%" };
+    case "square":    return { borderRadius: RADIUS_MAP[rc] };
+    case "rectangle": return { borderRadius: RADIUS_MAP[rc] };
+    default:          return {};
+  }
+}
+
+export default function PreflightModal({ file, initialShape, material, onApprove, onClose }: Props) {
+  const [uploadStatus, setUploadStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [progress, setProgress] = useState(0);
+  const [processedUrl, setProcessedUrl] = useState("");
+  const [originalUrl, setOriginalUrl] = useState("");
+  const [removedBg, setRemovedBg] = useState(false);
+
+  const [shape, setShape] = useState<ShapeId>(initialShape);
+  const [fitMode, setFitMode] = useState<FitMode>("edge");
+  const [roundedCorners, setRoundedCorners] = useState<RoundedCorners>("none");
+  const [border, setBorder] = useState<BorderThickness>("normal");
+  const [zoom, setZoom] = useState(1);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [showChangeForm, setShowChangeForm] = useState(false);
+  const [noteText, setNoteText] = useState("");
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval>;
+
+    async function run() {
+      setUploadStatus("loading");
+      setProgress(5);
+      timer = setInterval(() => setProgress((p) => Math.min(p + 6, 88)), 300);
+
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        const resp = await fetch("/api/upload", { method: "POST", body: fd });
+        clearInterval(timer);
+        if (!resp.ok) throw new Error("Upload failed");
+
+        const data = (await resp.json()) as {
+          processedUrl: string; originalUrl: string; removedBackground: boolean;
+        };
+        setProcessedUrl(data.processedUrl);
+        setOriginalUrl(data.originalUrl);
+        setRemovedBg(data.removedBackground);
+        setProgress(100);
+        setUploadStatus("ready");
+      } catch {
+        clearInterval(timer);
+        setUploadStatus("error");
+      }
+    }
+
+    run();
+    return () => clearInterval(timer);
+  }, [file]);
+
+  const isEdge = fitMode === "edge";
+  const showRoundedCorners = !isEdge && (shape === "square" || shape === "rectangle");
+  const { w, h } = getContainerSize(shape, zoom);
+  const clipStyle = getClipStyle(shape, fitMode, roundedCorners);
+
+  const SHAPES: ShapeId[] = ["die-cut", "circle", "oval", "square", "rectangle"];
+  const SHAPE_LABELS: Record<ShapeId, string> = { "die-cut": "Die", circle: "Circle", oval: "Oval", square: "Square", rectangle: "Rect" };
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+      <div className="relative bg-[#0c0c14] border border-white/[0.09] w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col md:flex-row shadow-2xl">
+
+        {/* Close */}
+        <button
+          onClick={() => onClose()}
+          className="absolute top-4 right-4 z-30 w-8 h-8 flex items-center justify-center text-gray-600 hover:text-white transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        {/* ── Left: Canvas ── */}
+        <div
+          className="flex-1 min-h-[300px] md:min-h-[500px] flex items-center justify-center relative overflow-hidden"
+          style={{ background: "radial-gradient(ellipse 80% 70% at 50% 40%, rgba(0,40,20,0.28) 0%, #060614 100%)" }}
+        >
+          {/* Grid */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
+              backgroundSize: "40px 40px",
+            }}
+          />
+
+          {/* Zoom controls — left side */}
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 flex flex-col gap-1.5 z-10">
+            <button
+              onClick={() => setZoom((z) => Math.min(+(z + 0.2).toFixed(1), 2))}
+              className="w-7 h-7 border border-white/10 bg-black/30 flex items-center justify-center text-gray-400 hover:text-white hover:border-white/25 transition-colors text-sm font-bold"
+            >+</button>
+            <button
+              onClick={() => setZoom((z) => Math.max(+(z - 0.2).toFixed(1), 0.4))}
+              className="w-7 h-7 border border-white/10 bg-black/30 flex items-center justify-center text-gray-400 hover:text-white hover:border-white/25 transition-colors text-sm font-bold"
+            >−</button>
+          </div>
+
+          {/* Zoom level — bottom center */}
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-10 pointer-events-none">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00ff44" strokeWidth="2" opacity="0.5">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <span className="text-[9px] text-[#00ff44]/50 tracking-widest">{Math.round(zoom * 100)}%</span>
+          </div>
+
+          {/* Loading */}
+          {uploadStatus === "loading" && (
+            <div className="flex flex-col items-center gap-5 z-10">
+              <div className="w-12 h-12 border-2 border-white/10 border-t-[#00ff44] rounded-full animate-spin" />
+              <div className="text-center">
+                <p className="text-[9px] tracking-[0.4em] uppercase text-gray-500 mb-3" style={{ fontFamily: "var(--font-orbitron)" }}>
+                  Generating Proof… {progress}%
+                </p>
+                <div className="w-40 h-1 bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full bg-[#00ff44] rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Error */}
+          {uploadStatus === "error" && (
+            <div className="z-10 text-center px-6">
+              <div className="w-10 h-10 border border-red-500/30 flex items-center justify-center mx-auto mb-3">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </div>
+              <p className="text-red-400 text-sm mb-3">Processing failed</p>
+              <button onClick={() => onClose()} className="text-xs text-gray-500 hover:text-white underline">Close</button>
+            </div>
+          )}
+
+          {/* Preview */}
+          {uploadStatus === "ready" && processedUrl && (
+            <div className="relative z-10 flex items-center justify-center p-10">
+              <div
+                style={{
+                  width: `${w}px`,
+                  height: `${h}px`,
+                  ...clipStyle,
+                  overflow: isEdge ? "visible" : "hidden",
+                  border: isEdge ? "none" : "2px dashed #00ff44",
+                  flexShrink: 0,
+                  transition: "all 0.2s ease",
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={processedUrl}
+                  alt="Proof"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: isEdge ? "contain" : fitMode === "fill" ? "cover" : "contain",
+                    display: "block",
+                    transition: "filter 0.15s ease",
+                    ...(isEdge ? { filter: cutlineFilter(border) } : {}),
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Right: Controls ── */}
+        <div className="w-full md:w-[320px] flex flex-col border-t md:border-t-0 md:border-l border-white/[0.06] overflow-y-auto" style={{ maxHeight: "95vh" }}>
+          <div className="p-6 flex flex-col gap-5">
+
+            {/* Header */}
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-[8px] tracking-[0.5em] uppercase text-[#00ff44] font-bold" style={{ fontFamily: "var(--font-orbitron)" }}>Preflight</span>
+                <div className="h-px flex-1 bg-[#00ff44]/20" />
+                <span className="text-[8px] px-1.5 py-0.5 border border-white/10 text-gray-600 tracking-wider">Beta</span>
+              </div>
+              <h2 className="text-base font-bold text-white" style={{ fontFamily: "var(--font-orbitron)" }}>Proof Review</h2>
+              <p className="text-xs text-gray-500 mt-0.5 capitalize">{material}</p>
+            </div>
+
+            {/* Shape selector */}
+            <div>
+              <p className="text-[9px] tracking-[0.35em] uppercase text-gray-500 mb-2" style={{ fontFamily: "var(--font-orbitron)" }}>Shape</p>
+              <div className="grid grid-cols-5 gap-1">
+                {SHAPES.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setShape(s)}
+                    disabled={uploadStatus !== "ready"}
+                    title={SHAPE_LABELS[s]}
+                    className={`flex flex-col items-center gap-1.5 py-2.5 border transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed ${
+                      shape === s
+                        ? "border-[#00ff44]/50 bg-[#00ff44]/[0.06] text-white"
+                        : "border-white/[0.07] text-gray-600 hover:border-white/20 hover:text-gray-400"
+                    }`}
+                  >
+                    <ShapeIcon id={s} size={17} />
+                    <span className="text-[7.5px] tracking-wider uppercase" style={{ fontFamily: "var(--font-orbitron)" }}>
+                      {SHAPE_LABELS[s]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Fit mode */}
+            <div>
+              <p className="text-[9px] tracking-[0.35em] uppercase text-gray-500 mb-2" style={{ fontFamily: "var(--font-orbitron)" }}>Mode</p>
+              <div className="flex gap-1">
+                {(["fill", "fit", "edge"] as FitMode[]).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setFitMode(m)}
+                    disabled={uploadStatus !== "ready"}
+                    className={`flex-1 py-2 text-[10px] font-bold tracking-[0.12em] uppercase border transition-all duration-200 disabled:opacity-30 ${
+                      fitMode === m
+                        ? m === "edge"
+                          ? "border-[#00ff44]/60 bg-[#00ff44]/[0.08] text-[#00ff44]"
+                          : "border-white/40 bg-white/[0.08] text-white"
+                        : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
+                    }`}
+                    style={{ fontFamily: "var(--font-orbitron)" }}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[9px] text-gray-600 mt-1.5 leading-relaxed">
+                {fitMode === "fill" ? "Image fills shape (may crop)" : fitMode === "fit" ? "Image fits inside shape" : "Cutline follows image edges"}
+              </p>
+            </div>
+
+            {/* Rounded corners — only for square/rect in non-edge mode */}
+            {showRoundedCorners && (
+              <div>
+                <p className="text-[9px] tracking-[0.35em] uppercase text-gray-500 mb-2" style={{ fontFamily: "var(--font-orbitron)" }}>Rounded Corners</p>
+                <div className="grid grid-cols-4 gap-1">
+                  {(["none", "soft", "medium", "heavy"] as RoundedCorners[]).map((rc) => {
+                    const rx = { none: 0, soft: 3, medium: 7, heavy: 15 }[rc];
+                    return (
+                      <button
+                        key={rc}
+                        onClick={() => setRoundedCorners(rc)}
+                        disabled={uploadStatus !== "ready"}
+                        className={`flex flex-col items-center gap-1.5 py-2.5 border transition-all duration-200 disabled:opacity-30 ${
+                          roundedCorners === rc
+                            ? "border-[#00ff44]/50 bg-[#00ff44]/[0.05] text-white"
+                            : "border-white/[0.07] text-gray-600 hover:border-white/20"
+                        }`}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                          <rect x="3" y="3" width="18" height="18" rx={rx} ry={rx} />
+                        </svg>
+                        <span className="text-[7.5px] tracking-wider uppercase" style={{ fontFamily: "var(--font-orbitron)" }}>{rc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Cutline thickness — only for edge mode */}
+            {isEdge && (
+              <div>
+                <p className="text-[9px] tracking-[0.35em] uppercase text-gray-500 mb-2" style={{ fontFamily: "var(--font-orbitron)" }}>Cutline</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(["thin", "normal", "wide"] as BorderThickness[]).map((b) => {
+                    const sw = b === "thin" ? 1 : b === "normal" ? 2 : 3.5;
+                    return (
+                      <button
+                        key={b}
+                        onClick={() => setBorder(b)}
+                        disabled={uploadStatus !== "ready"}
+                        className={`flex flex-col items-center gap-2 py-3 border transition-all duration-200 disabled:opacity-30 ${
+                          border === b
+                            ? "border-[#00ff44]/50 bg-[#00ff44]/[0.04] text-white"
+                            : "border-white/[0.07] text-gray-600 hover:border-white/20"
+                        }`}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                          <path d="M4 3L14 2L22 8L22 17L16 22L6 23L1 16L2 7Z" stroke="currentColor" strokeWidth={sw} strokeLinejoin="round" />
+                        </svg>
+                        <span className="text-[8px] tracking-widest uppercase" style={{ fontFamily: "var(--font-orbitron)" }}>{b}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Background status */}
+            {uploadStatus === "ready" && (
+              <div className={`flex items-start gap-2.5 p-3 border ${removedBg ? "border-green-500/20 bg-green-500/[0.03]" : "border-yellow-500/20 bg-yellow-500/[0.02]"}`}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={removedBg ? "#22c55e" : "#eab308"} strokeWidth="2.5" className="flex-shrink-0 mt-0.5">
+                  {removedBg
+                    ? <polyline points="20 6 9 17 4 12" />
+                    : <><line x1="12" y1="8" x2="12" y2="12" /><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12.01" y2="16" /></>
+                  }
+                </svg>
+                <p className="text-[10px] text-gray-500 leading-relaxed">
+                  {removedBg ? "Background removed. Green line = cutline." : "No background removal. Image prints as-is."}
+                </p>
+              </div>
+            )}
+
+            {/* CTAs */}
+            <div className="flex flex-col gap-2.5">
+              {showChangeForm ? (
+                <>
+                  <p className="text-[9px] tracking-[0.3em] uppercase text-gray-400 mb-1" style={{ fontFamily: "var(--font-orbitron)" }}>
+                    Describe the changes needed:
+                  </p>
+                  <textarea
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    rows={4}
+                    placeholder="e.g. Remove the white background, make the text larger, adjust colors…"
+                    className="w-full bg-white/[0.04] border border-white/10 text-white text-xs px-3 py-2.5 focus:outline-none focus:border-white/25 resize-none placeholder:text-gray-600 leading-relaxed"
+                  />
+                  <button
+                    onClick={() => onClose(noteText.trim() || undefined)}
+                    className="w-full py-3 text-xs font-bold tracking-[0.15em] uppercase bg-indigo-600 text-white hover:bg-indigo-500 active:scale-[0.98] transition-all"
+                    style={{ fontFamily: "var(--font-orbitron)" }}
+                  >
+                    Submit &amp; Continue →
+                  </button>
+                  <button
+                    onClick={() => setShowChangeForm(false)}
+                    className="w-full text-xs text-gray-500 hover:text-white transition-colors py-1.5"
+                  >
+                    ← Back to Proof
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={async () => {
+                      if (uploadStatus !== "ready" || isSaving) return;
+                      setIsSaving(true);
+                      let shopifyUrl: string | null = null;
+                      try {
+                        const blob = await fetch(processedUrl).then((r) => r.blob());
+                        const fd = new FormData();
+                        fd.append("file", blob, file.name.replace(/\.[^.]+$/, "") + ".png");
+                        fd.append("shape", shape);
+                        fd.append("fitMode", fitMode);
+                        fd.append("borderThickness", border);
+                        fd.append("roundedCorners", roundedCorners);
+                        fd.append("removedBackground", String(removedBg));
+                        fd.append("fileName", file.name);
+                        const resp2 = await fetch("/api/proof", { method: "POST", body: fd });
+                        const data2 = (await resp2.json()) as { shopifyUrl?: string | null };
+                        shopifyUrl = data2.shopifyUrl ?? null;
+                      } catch {
+                        // non-fatal — approve without shopifyUrl
+                      }
+                      setIsSaving(false);
+                      onApprove({ processedUrl, originalUrl, shopifyUrl, borderThickness: border, removedBackground: removedBg, shape, fitMode, roundedCorners });
+                    }}
+                    disabled={uploadStatus !== "ready" || isSaving}
+                    className="w-full py-3.5 text-sm font-bold tracking-[0.15em] uppercase bg-[#22c55e] text-black hover:bg-[#16a34a] active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    style={{ fontFamily: "var(--font-orbitron)" }}
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                        Saving…
+                      </>
+                    ) : (
+                      "Take this design ✓"
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShowChangeForm(true)}
+                    className="w-full text-xs text-gray-500 hover:text-white transition-colors py-2"
+                  >
+                    No, I need changes
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* What is Preflight */}
+            <div className="border-t border-white/[0.05] pt-4">
+              <p className="text-[8px] font-bold tracking-[0.4em] uppercase text-yellow-400/70 mb-2" style={{ fontFamily: "var(--font-orbitron)" }}>
+                What is Preflight?
+              </p>
+              <p className="text-[10px] text-gray-600 leading-relaxed">
+                Automated proof system. We process your file and show a cutline preview. A human reviews every order before printing.
+              </p>
+              <p className="text-[10px] text-gray-600 leading-relaxed mt-1.5">
+                If the preview doesn&apos;t look right, tap{" "}
+                <span className="text-gray-400">No, I need changes</span>{" "}
+                and re-upload or add instructions.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -9,7 +9,8 @@ const DISCOUNT_KEY = "sv_discount";
 const PENDING_KEY = "sv_pending_checkout";
 
 export type PendingCheckout = {
-  draftOrderId: number;
+  draftOrderId: string;
+  name?: string;
   invoiceUrl: string;
   createdAt: number;
 };

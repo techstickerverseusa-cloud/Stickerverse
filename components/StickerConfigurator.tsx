@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useCart } from "@/lib/cart-store";
 import type { VinylStickerCartItem } from "@/lib/cart-types";
 import type { ShopifyProduct } from "@/lib/shopify-products";
+import PreflightModal, { type ProofResult, type ShapeId as PreflightShapeId } from "./PreflightModal";
 
 // ─── Pricing tiers ────────────────────────────────────────────────────────────
 
@@ -166,6 +167,8 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
   const [dragging, setDragging] = useState(false);
   const [instructions, setInstructions] = useState("");
   const [added, setAdded] = useState(false);
+  const [preflightOpen, setPreflightOpen] = useState(false);
+  const [proofResult, setProofResult] = useState<ProofResult | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { addItem } = useCart();
 
@@ -194,6 +197,7 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
   // File handling
   function handleFile(f: File) {
     setFile(f);
+    setProofResult(null);
     if (f.type.startsWith("image/")) {
       const url = URL.createObjectURL(f);
       setFilePreview(url);
@@ -233,7 +237,20 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
       tierQty: activeTier.qty,
       perUnit: activePerUnit,
       fileName: file?.name,
+      fileUrl: proofResult?.shopifyUrl ?? undefined,
       instructions: instructions || undefined,
+      proof: proofResult
+        ? {
+            status: "approved" as const,
+            proofUrl: proofResult.shopifyUrl ?? undefined,
+            cutlineUrl: proofResult.shopifyUrl ?? undefined,
+            shape: proofResult.shape,
+            borderThickness: proofResult.borderThickness,
+            roundedCorners: proofResult.roundedCorners,
+            removedBackground: proofResult.removedBackground,
+            lowResolution: false,
+          }
+        : undefined,
     };
     addItem(cartItem);
 
@@ -244,14 +261,50 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
   const canAddToCart = sizeId !== "custom" || (customW !== "" && customH !== "");
 
   return (
+    <>
+    {preflightOpen && file && (
+      <PreflightModal
+        file={file}
+        initialShape={shape as PreflightShapeId}
+        material={material}
+        onApprove={(proof) => {
+          setProofResult(proof);
+          setShape(proof.shape as ShapeId);
+          setPreflightOpen(false);
+        }}
+        onClose={(note) => {
+          setPreflightOpen(false);
+          if (note) setInstructions((prev) => prev ? `${prev}\n\nChange Request: ${note}` : `Change Request: ${note}`);
+        }}
+      />
+    )}
     <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-12">
       <div className="grid lg:grid-cols-2 gap-10 xl:gap-16">
 
         {/* ── Left: Gallery ── */}
         <div className="lg:sticky lg:top-24 self-start">
           {/* Main image */}
-          <div className="relative aspect-square overflow-hidden bg-white/[0.02] border border-white/5 mb-3">
-            {images[activeImg] ? (
+          <div
+            className="relative aspect-square overflow-hidden border border-white/5 mb-3 flex items-center justify-center"
+            style={{ background: proofResult ? "radial-gradient(ellipse 80% 70% at 50% 40%, rgba(0,30,10,0.4) 0%, #06060a 100%)" : "rgba(255,255,255,0.02)" }}
+          >
+            {/* Proof image (approved design) */}
+            {proofResult ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={proofResult.processedUrl}
+                alt="Approved proof"
+                className="max-w-[80%] max-h-[80%] object-contain"
+                style={{
+                  filter: [
+                    `drop-shadow(${proofResult.borderThickness === "thin" ? 2 : proofResult.borderThickness === "normal" ? 4 : 8}px 0 0 #00ff44)`,
+                    `drop-shadow(-${proofResult.borderThickness === "thin" ? 2 : proofResult.borderThickness === "normal" ? 4 : 8}px 0 0 #00ff44)`,
+                    `drop-shadow(0 ${proofResult.borderThickness === "thin" ? 2 : proofResult.borderThickness === "normal" ? 4 : 8}px 0 #00ff44)`,
+                    `drop-shadow(0 -${proofResult.borderThickness === "thin" ? 2 : proofResult.borderThickness === "normal" ? 4 : 8}px 0 #00ff44)`,
+                  ].join(" "),
+                }}
+              />
+            ) : images[activeImg] ? (
               <Image
                 src={images[activeImg].url}
                 alt={images[activeImg].altText ?? product.title}
@@ -270,6 +323,19 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
                 </span>
               </div>
             )}
+
+            {/* Proof approved badge */}
+            {proofResult && (
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 border border-green-500/30 bg-green-500/10">
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span className="text-[8px] text-green-400 tracking-widest uppercase" style={{ fontFamily: "var(--font-orbitron)" }}>
+                  Proof OK
+                </span>
+              </div>
+            )}
+
             {/* Material badge overlay */}
             <div className="absolute bottom-3 left-3">
               <span
@@ -574,17 +640,46 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
               </div>
             </div>
             {file && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setFile(null);
-                  setFilePreview(null);
-                  if (fileRef.current) fileRef.current.value = "";
-                }}
-                className="mt-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                × Remove file
-              </button>
+              <div className="mt-3 flex items-center gap-3 flex-wrap">
+                {/* Proof status */}
+                {proofResult ? (
+                  <div className="flex items-center gap-2 px-3 py-1.5 border border-green-500/30 bg-green-500/[0.04]">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span className="text-[10px] text-green-400 tracking-wide" style={{ fontFamily: "var(--font-orbitron)" }}>
+                      Proof Approved
+                    </span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setPreflightOpen(true); }}
+                    className="flex items-center gap-2 px-4 py-2 border border-indigo-500/40 bg-indigo-500/[0.06] text-indigo-300 text-xs font-semibold hover:border-indigo-400/60 hover:text-indigo-200 transition-all duration-200"
+                    style={{ fontFamily: "var(--font-orbitron)" }}
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    View Proof
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFile(null);
+                    setFilePreview(null);
+                    setProofResult(null);
+                    if (fileRef.current) fileRef.current.value = "";
+                  }}
+                  className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
+                >
+                  × Remove file
+                </button>
+              </div>
             )}
           </Section>
 
@@ -653,5 +748,6 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
         </div>
       </div>
     </div>
+    </>
   );
 }
