@@ -11,6 +11,7 @@ export interface ProofResult {
   processedUrl: string;
   originalUrl: string;
   shopifyUrl: string | null;
+  designUrl: string | null;
   borderThickness: BorderThickness;
   removedBackground: boolean;
   shape: ShapeId;
@@ -426,6 +427,7 @@ export default function PreflightModal({ file, initialShape, material, onApprove
                       if (uploadStatus !== "ready" || isSaving) return;
                       setIsSaving(true);
                       let shopifyUrl: string | null = null;
+                      let designUrl: string | null = null;
                       try {
                         const blob = await fetch(processedUrl).then((r) => r.blob());
                         const fd = new FormData();
@@ -437,13 +439,14 @@ export default function PreflightModal({ file, initialShape, material, onApprove
                         fd.append("removedBackground", String(removedBg));
                         fd.append("fileName", file.name);
                         const resp2 = await fetch("/api/proof", { method: "POST", body: fd });
-                        const data2 = (await resp2.json()) as { shopifyUrl?: string | null };
+                        const data2 = (await resp2.json()) as { shopifyUrl?: string | null; designUrl?: string | null };
                         shopifyUrl = data2.shopifyUrl ?? null;
+                        designUrl = data2.designUrl ?? null;
                       } catch {
                         // non-fatal — approve without shopifyUrl
                       }
                       setIsSaving(false);
-                      onApprove({ processedUrl, originalUrl, shopifyUrl, borderThickness: border, removedBackground: removedBg, shape, fitMode, roundedCorners });
+                      onApprove({ processedUrl, originalUrl, shopifyUrl, designUrl, borderThickness: border, removedBackground: removedBg, shape, fitMode, roundedCorners });
                     }}
                     disabled={uploadStatus !== "ready" || isSaving}
                     className="w-full py-3.5 text-sm font-bold tracking-[0.15em] uppercase bg-[#22c55e] text-black hover:bg-[#16a34a] active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"

@@ -49,15 +49,26 @@ export async function POST(req: NextRequest) {
       if (item.customWidth)  attrs.push({ key: "Custom Width",  value: `${item.customWidth} in` });
       if (item.customHeight) attrs.push({ key: "Custom Height", value: `${item.customHeight} in` });
       if (item.fileName)     attrs.push({ key: "Design File",   value: item.fileName });
-      const proofUrl = item.proof?.proofUrl;
-      if (proofUrl && !proofUrl.startsWith("data:")) {
-        attrs.push({ key: "Proof URL", value: proofUrl.substring(0, 500) });
+      // Design File URL — clean bg-removed image (no cutline overlay), for printing
+      const designFileUrl = item.proof?.designUrl ?? item.fileUrl;
+      if (designFileUrl && !designFileUrl.startsWith("data:")) {
+        attrs.push({ key: "Design File URL", value: designFileUrl });
       }
-      const shopifyFileUrl = item.proof?.cutlineUrl ?? item.fileUrl;
-      if (shopifyFileUrl && !shopifyFileUrl.startsWith("data:")) {
-        attrs.push({ key: "Shopify File URL", value: shopifyFileUrl });
+
+      if (item.proof?.removedBackground) {
+        attrs.push({ key: "Background Removed", value: "Yes" });
       }
-      if (item.instructions) attrs.push({ key: "Instructions",  value: item.instructions });
+      // Design settings as text — visible in Shopify admin
+      if (item.proof) {
+        const parts: string[] = [];
+        if (item.proof.shape)          parts.push(`shape: ${item.proof.shape}`);
+        if (item.proof.fitMode)        parts.push(`mode: ${item.proof.fitMode}`);
+        if (item.proof.borderThickness) parts.push(`cutline: ${item.proof.borderThickness}`);
+        if (item.proof.roundedCorners && item.proof.roundedCorners !== "none") parts.push(`corners: ${item.proof.roundedCorners}`);
+        if (item.proof.removedBackground) parts.push("bg removed");
+        if (parts.length) attrs.push({ key: "Design Settings", value: parts.join(" · ") });
+      }
+      if (item.instructions) attrs.push({ key: "Instructions", value: item.instructions });
 
       return {
         title: item.title,

@@ -372,22 +372,7 @@ export default function GenericProductPage({ product }: { product: ShopifyProduc
 
             {/* CTA */}
             <div className="flex flex-col gap-3">
-              {file && !proofResult && !changeNote ? (
-                /* File uploaded, no proof/note yet → show View Proof */
-                <button
-                  type="button"
-                  onClick={() => setPreflightOpen(true)}
-                  className="w-full py-4 text-sm font-bold tracking-widest uppercase bg-indigo-600 text-white hover:bg-indigo-500 transition-all duration-200 flex items-center justify-center gap-2"
-                  style={{ fontFamily: "var(--font-orbitron)" }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                  View Proof →
-                </button>
-              ) : (
-                /* No file / proof approved / change note submitted → show Add to Cart */
+              {proofResult ? (
                 <button
                   onClick={handleAddToCart}
                   disabled={!inStock}
@@ -399,6 +384,24 @@ export default function GenericProductPage({ product }: { product: ShopifyProduc
                   style={{ fontFamily: "var(--font-orbitron)" }}
                 >
                   {inStock ? "Add to Cart →" : "Out of Stock"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { if (file) setPreflightOpen(true); }}
+                  disabled={!file}
+                  className={`w-full py-4 text-sm font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2 ${
+                    file
+                      ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                      : "bg-white/10 text-gray-600 cursor-not-allowed"
+                  }`}
+                  style={{ fontFamily: "var(--font-orbitron)" }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  {file ? "View Proof →" : "Upload Design to Continue"}
                 </button>
               )}
             </div>

@@ -9,9 +9,11 @@ function SignupForm() {
   const [lastName,  setLastName]  = useState("");
   const [email,     setEmail]     = useState("");
   const [password,  setPassword]  = useState("");
+  const [showPwd,   setShowPwd]   = useState(false);
   const [marketing, setMarketing] = useState(false);
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState("");
+  const [success,   setSuccess]   = useState("");
 
   const router = useRouter();
   const params = useSearchParams();
@@ -30,7 +32,10 @@ function SignupForm() {
     setLoading(false);
 
     if (!res.ok) { setError(data.error ?? "Signup failed"); return; }
-    if (data.requiresManualLogin) { router.push("/login"); return; }
+    if (data.requiresManualLogin) {
+      setSuccess("Account created! You can now sign in with your credentials.");
+      return;
+    }
     router.push(redirect);
     router.refresh();
   }
@@ -127,15 +132,35 @@ function SignupForm() {
                   style={{ fontFamily: "var(--font-orbitron)" }}>
                   Password* (min 8 chars)
                 </label>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-white/[0.04] border border-white/[0.10] text-white text-sm px-4 py-3.5 focus:outline-none focus:border-white/30 focus:bg-white/[0.06] placeholder:text-gray-700 transition-all duration-200"
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <input
+                    type={showPwd ? "text" : "password"}
+                    required
+                    minLength={8}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-white/[0.04] border border-white/[0.10] text-white text-sm px-4 py-3.5 pr-12 focus:outline-none focus:border-white/30 focus:bg-white/[0.06] placeholder:text-gray-700 transition-all duration-200"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd((v) => !v)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-300 transition-colors duration-200"
+                  >
+                    {showPwd ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
                 {/* Strength hint */}
                 {password.length > 0 && (
                   <div className="mt-2 flex gap-1">
@@ -183,6 +208,21 @@ function SignupForm() {
                     <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                   </svg>
                   <p className="text-red-400 text-xs leading-relaxed">{error}</p>
+                </div>
+              )}
+
+              {/* Success (requiresManualLogin) */}
+              {success && (
+                <div className="flex items-start gap-2.5 bg-green-500/[0.08] border border-green-500/20 px-4 py-3">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-400 flex-shrink-0 mt-0.5">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  <div>
+                    <p className="text-green-400 text-xs leading-relaxed">{success}</p>
+                    <Link href={`/login?redirect=${encodeURIComponent(redirect)}`} className="text-white text-xs underline underline-offset-2 mt-1 inline-block hover:text-gray-300 transition-colors">
+                      Go to Sign In →
+                    </Link>
+                  </div>
                 </div>
               )}
 

@@ -91,12 +91,19 @@ function safeWritePending(p: PendingCheckout | null) {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => safeRead());
-  const [discount, setDiscount] = useState<CartDiscount | null>(() => safeReadDiscount());
-  const [pendingCheckout, setPendingCheckoutState] = useState<PendingCheckout | null>(() => safeReadPending());
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [discount, setDiscount] = useState<CartDiscount | null>(null);
+  const [pendingCheckout, setPendingCheckoutState] = useState<PendingCheckout | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
 
-  useEffect(() => { setIsHydrated(true); }, []);
+  // Read from localStorage FIRST, then mark hydrated — all batched in one render.
+  // This prevents safeWrite from overwriting localStorage with the empty SSR state.
+  useEffect(() => {
+    setItems(safeRead());
+    setDiscount(safeReadDiscount());
+    setPendingCheckoutState(safeReadPending());
+    setIsHydrated(true);
+  }, []);
   useEffect(() => { if (isHydrated) safeWrite(items); }, [items, isHydrated]);
   useEffect(() => { if (isHydrated) safeWriteDiscount(discount); }, [discount, isHydrated]);
   useEffect(() => { if (isHydrated) safeWritePending(pendingCheckout); }, [pendingCheckout, isHydrated]);
@@ -117,22 +124,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setDiscount(safeReadDiscount());
       setPendingCheckoutState(safeReadPending());
     }
-    window.addEventListener("pageshow", resync);
-    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") resync(); });
-    window.addEventListener("focus", resync);
+    function onPageShow() { resync(); }
+    function onVisibility() { if (document.visibilityState === "visible") resync(); }
+    function onFocus() { resync(); }
+    window.addEventListener("pageshow", onPageShow);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
     return () => {
-      window.removeEventListener("pageshow", resync);
-      window.removeEventListener("focus", resync);
+      window.removeEventListener("pageshow", onPageShow);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
     };
   }, []);
 
-  useEffect(() => {
-    if (!isHydrated) return;
-    if (items.length === 0) {
-      const local = safeRead();
-      if (local.length > 0) setItems(local);
-    }
-  }, [items, isHydrated]);
 
   const addItem = useCallback<CartContextValue["addItem"]>((item) => {
     setItems((prev) => {

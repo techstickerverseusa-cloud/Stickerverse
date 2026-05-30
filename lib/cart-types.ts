@@ -39,7 +39,9 @@ export interface VinylStickerCartItem extends CartItemBase {
     status: "approved" | "changes-requested";
     proofUrl?: string;
     cutlineUrl?: string;
+    designUrl?: string;
     shape: string;
+    fitMode: string;
     borderThickness: string;
     roundedCorners: string;
     removedBackground: boolean;

@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart-store";
 import type { VinylStickerCartItem } from "@/lib/cart-types";
 import type { ShopifyProduct } from "@/lib/shopify-products";
@@ -166,11 +167,11 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [instructions, setInstructions] = useState("");
-  const [added, setAdded] = useState(false);
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [proofResult, setProofResult] = useState<ProofResult | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { addItem } = useCart();
+  const router = useRouter();
 
   const images =
     product.images.length > 0
@@ -237,14 +238,16 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
       tierQty: activeTier.qty,
       perUnit: activePerUnit,
       fileName: file?.name,
-      fileUrl: proofResult?.shopifyUrl ?? undefined,
+      fileUrl: proofResult?.designUrl ?? proofResult?.shopifyUrl ?? undefined,
       instructions: instructions || undefined,
       proof: proofResult
         ? {
             status: "approved" as const,
             proofUrl: proofResult.shopifyUrl ?? undefined,
             cutlineUrl: proofResult.shopifyUrl ?? undefined,
+            designUrl: proofResult.designUrl ?? undefined,
             shape: proofResult.shape,
+            fitMode: proofResult.fitMode,
             borderThickness: proofResult.borderThickness,
             roundedCorners: proofResult.roundedCorners,
             removedBackground: proofResult.removedBackground,
@@ -253,9 +256,7 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
         : undefined,
     };
     addItem(cartItem);
-
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2500);
+    router.push("/cart");
   }
 
   const canAddToCart = sizeId !== "custom" || (customW !== "" && customH !== "");
@@ -641,8 +642,7 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
             </div>
             {file && (
               <div className="mt-3 flex items-center gap-3 flex-wrap">
-                {/* Proof status */}
-                {proofResult ? (
+                {proofResult && (
                   <div className="flex items-center gap-2 px-3 py-1.5 border border-green-500/30 bg-green-500/[0.04]">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3">
                       <polyline points="20 6 9 17 4 12" />
@@ -651,19 +651,6 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
                       Proof Approved
                     </span>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setPreflightOpen(true); }}
-                    className="flex items-center gap-2 px-4 py-2 border border-indigo-500/40 bg-indigo-500/[0.06] text-indigo-300 text-xs font-semibold hover:border-indigo-400/60 hover:text-indigo-200 transition-all duration-200"
-                    style={{ fontFamily: "var(--font-orbitron)" }}
-                  >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                    View Proof
-                  </button>
                 )}
 
                 <button
@@ -720,20 +707,38 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
               </div>
             </div>
 
-            <button
-              onClick={handleAddToCart}
-              disabled={!canAddToCart}
-              className={`w-full py-4 text-sm font-bold tracking-widest uppercase transition-all duration-200 ${
-                added
-                  ? "bg-green-600 text-white"
-                  : canAddToCart
-                  ? "bg-white text-black hover:bg-gray-100 active:scale-[0.99]"
-                  : "bg-white/10 text-gray-600 cursor-not-allowed"
-              }`}
-              style={{ fontFamily: "var(--font-orbitron)" }}
-            >
-              {added ? "✓ Added to Cart" : `Add to Cart →`}
-            </button>
+            {proofResult ? (
+              <button
+                onClick={handleAddToCart}
+                disabled={!canAddToCart}
+                className={`w-full py-4 text-sm font-bold tracking-widest uppercase transition-all duration-200 ${
+                  canAddToCart
+                    ? "bg-white text-black hover:bg-gray-100 active:scale-[0.99]"
+                    : "bg-white/10 text-gray-600 cursor-not-allowed"
+                }`}
+                style={{ fontFamily: "var(--font-orbitron)" }}
+              >
+                Add to Cart →
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { if (file && canAddToCart) setPreflightOpen(true); }}
+                disabled={!file || !canAddToCart}
+                className={`w-full py-4 text-sm font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2 ${
+                  file && canAddToCart
+                    ? "bg-indigo-600 text-white hover:bg-indigo-500 active:scale-[0.99]"
+                    : "bg-white/10 text-gray-600 cursor-not-allowed"
+                }`}
+                style={{ fontFamily: "var(--font-orbitron)" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                {file ? "View Proof →" : "Upload Design to Continue"}
+              </button>
+            )}
 
             {!canAddToCart && sizeId === "custom" && (
               <p className="text-[10px] text-gray-600 text-center mt-2">

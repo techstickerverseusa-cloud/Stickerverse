@@ -1,8 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart-store";
 import type { CartItem } from "@/lib/cart-types";
 
@@ -11,22 +11,68 @@ function fmt(n: number) {
 }
 
 export default function CartPage() {
-  const { items, removeItem, updateQty, subtotal, total, itemCount, isHydrated, clearCart } = useCart();
-  const router = useRouter();
+  const { items, removeItem, updateQty, subtotal, total, itemCount, isHydrated, clearCart, setPendingCheckout } = useCart();
+  const [email, setEmail] = useState("");
+  const [checkoutStatus, setCheckoutStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  // Force a full reload when returning from the Shopify payment page so React
+  // state (checkoutStatus = "loading") is fully reset no matter how the browser
+  // restores the page (bfcache, Next.js router cache, or normal navigation).
+  useEffect(() => {
+    function resetIfFromCheckout() {
+      // Keep reload() outside the try-catch so sessionStorage errors don't swallow it.
+      let shouldReload = false;
+      try {
+        if (sessionStorage.getItem("sv_checkout_redirect")) {
+          sessionStorage.removeItem("sv_checkout_redirect");
+          shouldReload = true;
+        }
+      } catch { }
+      if (shouldReload) window.location.reload();
+    }
+    resetIfFromCheckout();
+    window.addEventListener("pageshow", resetIfFromCheckout);
+    return () => window.removeEventListener("pageshow", resetIfFromCheckout);
+  }, []);
+
+  async function handleCheckout() {
+    if (!email.trim()) { setErrorMsg("Please enter your email address."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setErrorMsg("Please enter a valid email address."); return; }
+
+    setCheckoutStatus("loading");
+    setErrorMsg("");
+
+    try {
+      const resp = await fetch("/api/checkout/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items, email }),
+      });
+      const data = (await resp.json()) as { draftOrderId?: string; name?: string; invoiceUrl?: string; error?: string };
+      if (!resp.ok || data.error) throw new Error(data.error ?? "Checkout failed");
+      if (!data.invoiceUrl) throw new Error("No payment URL returned");
+
+      setPendingCheckout({ draftOrderId: data.draftOrderId ?? "", name: data.name, invoiceUrl: data.invoiceUrl, createdAt: Date.now() });
+      // Set flag BEFORE navigating — survives any page restoration mechanism
+      try { sessionStorage.setItem("sv_checkout_redirect", "1"); } catch { }
+      window.location.href = data.invoiceUrl;
+    } catch (err) {
+      setCheckoutStatus("error");
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    }
+  }
 
   if (!isHydrated) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="w-6 h-6 border border-white/20 border-t-white rounded-full animate-spin" />
-      </div>
-    );
+    // Invisible placeholder — no spinner, avoids jarring flash
+    return <div className="min-h-[60vh]" />;
   }
 
   if (items.length === 0) {
     return (
       <main className="min-h-[75vh] flex flex-col items-center justify-center px-4 text-center">
         <div className="relative mb-8">
-          <div className="w-24 h-24 border border-white/[0.08] flex items-center justify-center"
+          <div className="w-24 h-24 border border-white/8 flex items-center justify-center"
             style={{ background: "radial-gradient(ellipse at center, rgba(80,60,200,0.08) 0%, transparent 70%)" }}>
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" className="text-gray-600">
               <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
@@ -63,7 +109,7 @@ export default function CartPage() {
   }
 
   return (
-    <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-14">
+    <main className="max-w-350 mx-auto px-4 sm:px-6 py-14">
       {/* Header */}
       <div className="mb-10 flex items-end justify-between">
         <div>
@@ -106,11 +152,11 @@ export default function CartPage() {
         {/* Summary */}
         <div className="lg:col-span-1">
           <div
-            className="border border-white/[0.08] p-7 sticky top-24"
+            className="border border-white/8 p-7 sticky top-24"
             style={{ background: "rgba(255,255,255,0.02)" }}
           >
             {/* Gradient top */}
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+            <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-purple-500/30 to-transparent" />
 
             <h2
               className="text-[11px] font-bold text-white tracking-[0.2em] uppercase mb-7"
@@ -134,30 +180,63 @@ export default function CartPage() {
               </div>
             </div>
 
-            <div className="border-t border-white/[0.06] pt-5 mb-7">
+            <div className="border-t border-white/6 pt-5 mb-6">
               <div className="flex justify-between items-baseline">
                 <span className="text-sm font-semibold text-white">Estimated Total</span>
                 <span className="text-2xl font-bold text-white">{fmt(total)}</span>
               </div>
             </div>
 
+            {/* Email field */}
+            <div className="mb-4">
+              <label className="block text-[10px] text-gray-500 mb-2 tracking-[0.2em] uppercase" style={{ fontFamily: "var(--font-orbitron)" }}>
+                Email Address *
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setErrorMsg(""); }}
+                placeholder="you@example.com"
+                className="w-full bg-white/4 border border-white/9-white text-sm px-4 py-3 focus:outline-none focus:border-white/30 placeholder:text-gray-600 transition-all duration-200"
+              />
+              <p className="text-[10px] text-gray-600 mt-1.5">Order confirmation will be sent here.</p>
+            </div>
+
+            {/* Error */}
+            {errorMsg && (
+              <div className="mb-4 flex items-start gap-2 p-3 border border-red-500/25 bg-red-500/4">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" className="shrink-0 mt-0.5">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+                <p className="text-[11px] text-red-400">{errorMsg}</p>
+              </div>
+            )}
+
             <button
-              className="w-full text-xs font-bold py-4 tracking-[0.2em] uppercase hover:opacity-90 active:scale-[0.99] transition-all duration-200 mb-4"
+              onClick={handleCheckout}
+              disabled={checkoutStatus === "loading"}
+              className="w-full text-xs font-bold py-4 tracking-[0.2em] uppercase hover:opacity-90 active:scale-[0.99] transition-all duration-200 mb-4 flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ fontFamily: "var(--font-orbitron)", background: "#ffffff", color: "#000000" }}
-              onClick={() => router.push("/checkout")}
             >
-              Proceed to Checkout →
+              {checkoutStatus === "loading" ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                  Creating Order…
+                </>
+              ) : (
+                "Proceed to Payment →"
+              )}
             </button>
 
             {/* Trust */}
-            <div className="border-t border-white/[0.05] pt-5 flex flex-col gap-2.5 mt-2">
+            <div className="border-t border-white/5 pt-5 flex flex-col gap-2.5 mt-2">
               {[
                 "Secure SSL checkout",
                 "Free shipping on orders over $50",
                 "100% satisfaction guarantee",
               ].map((txt) => (
                 <div key={txt} className="flex items-center gap-2.5">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-green-500 flex-shrink-0">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-green-500 shrink-0">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                   <span className="text-[11px] text-gray-600">{txt}</span>

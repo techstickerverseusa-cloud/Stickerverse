@@ -171,17 +171,20 @@ export async function uploadFileToShopify(
   };
 
   const created = createJson.data?.fileCreate?.files?.[0];
-  if (!created) return null;
+  // If file creation failed entirely, fall back to the staging resourceUrl which
+  // is publicly readable right after the upload above (valid for ~48 h).
+  if (!created) return target.resourceUrl;
 
   // If URL is immediately available (already READY), return it
   const immediateUrl = created.image?.url ?? created.url;
   if (immediateUrl) return immediateUrl;
 
-  // 4. Poll until READY (max 8 × 2s = 16s)
+  // 4. Poll until READY (max 12 × 2s = 24s)
   const fileId = created.id;
-  if (!fileId) return null;
+  // If no fileId, fall back to staging URL
+  if (!fileId) return target.resourceUrl;
 
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 12; i++) {
     await new Promise((r) => setTimeout(r, 2000));
 
     const pollResp = await fetch(base, {
@@ -211,5 +214,7 @@ export async function uploadFileToShopify(
     }
   }
 
-  return null;
+  // Shopify CDN URL not ready within polling window — return staging URL as fallback.
+  // This is publicly accessible for ~48 h which is enough for the admin to act on the order.
+  return target.resourceUrl;
 }

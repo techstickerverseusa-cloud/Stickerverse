@@ -53,7 +53,15 @@ async function generateProof(
   if (!w || !h) return buf;
 
   if (fitMode === "edge") {
-    if (!removedBackground) return buf;
+    if (!removedBackground) {
+      // No alpha channel to follow — add a rectangular border to show the cut boundary
+      const b2 = BPX_MAP[borderThickness];
+      const half = b2 / 2;
+      const svgBorder = Buffer.from(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect x="${half}" y="${half}" width="${w - b2}" height="${h - b2}" fill="none" stroke="#00ff44" stroke-width="${b2}"/></svg>`,
+      );
+      return sharp(buf).composite([{ input: svgBorder, blend: "over" }]).png().toBuffer();
+    }
     return makeDieCut(buf, BLUR_MAP[borderThickness], sharp, w, h);
   }
 
@@ -118,8 +126,15 @@ async function generateProof(
     return sharp(masked).composite([{ input: svgLine, blend: "over" }]).png().toBuffer();
   }
 
-  // die-cut fallback
-  if (!removedBackground) return buf;
+  // die-cut fallback (fill/fit mode)
+  if (!removedBackground) {
+    const bFall = BPX_MAP[borderThickness];
+    const halfFall = bFall / 2;
+    const svgBorderFall = Buffer.from(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect x="${halfFall}" y="${halfFall}" width="${w - bFall}" height="${h - bFall}" fill="none" stroke="#00ff44" stroke-width="${bFall}"/></svg>`,
+    );
+    return sharp(buf).composite([{ input: svgBorderFall, blend: "over" }]).png().toBuffer();
+  }
   return makeDieCut(buf, BLUR_MAP[borderThickness], sharp, w, h);
 }
 
@@ -141,24 +156,44 @@ export async function POST(req: NextRequest) {
     const baseName = fileName.replace(/\.[^.]+$/, "");
 
     let shopifyUrl: string | null = null;
+    let designUrl: string | null = null;
 
     if (mime.startsWith("image/") && mime !== "image/svg+xml") {
+      const sharpLib = (await import("sharp")).default;
+
+      let proofBuf: Buffer = buf;
       try {
-        const proofBuf = await generateProof(buf, shape, fitMode, borderThickness, roundedCorners, removedBackground);
-        shopifyUrl = await uploadFileToShopify(proofBuf, `${baseName}_${shape}_proof.png`, "image/png");
-      } catch {
-        try {
-          shopifyUrl = await uploadFileToShopify(buf, `${baseName}_proof.png`, mime);
-        } catch { /* non-fatal */ }
-      }
+        proofBuf = await generateProof(buf, shape, fitMode, borderThickness, roundedCorners, removedBackground);
+      } catch { /* use raw buf as fallback */ }
+
+      // Composite proof over white background so the cutline is clearly visible
+      // in Shopify admin (Shopify renders transparent PNGs as gray, hiding the cutline)
+      let proofForAdmin = proofBuf;
+      try {
+        const { width: pw = 0, height: ph = 0 } = await sharpLib(proofBuf).metadata();
+        if (pw && ph) {
+          proofForAdmin = await sharpLib({
+            create: { width: pw, height: ph, channels: 3, background: { r: 255, g: 255, b: 255 } },
+          })
+            .png()
+            .composite([{ input: proofBuf, blend: "over" }])
+            .toBuffer();
+        }
+      } catch { /* use proofBuf as-is */ }
+
+      [designUrl, shopifyUrl] = await Promise.all([
+        uploadFileToShopify(buf, `${baseName}_design.png`, "image/png").catch(() => null),
+        uploadFileToShopify(proofForAdmin, `${baseName}_${shape}_proof.png`, "image/png").catch(() => null),
+      ]);
     } else {
       try {
         const ext = fileName.match(/\.[^.]+$/)?.[0] ?? "";
         shopifyUrl = await uploadFileToShopify(buf, `${baseName}_proof${ext}`, mime);
+        designUrl = shopifyUrl;
       } catch { /* non-fatal */ }
     }
 
-    return NextResponse.json({ shopifyUrl });
+    return NextResponse.json({ shopifyUrl, designUrl });
   } catch (err) {
     console.error("[/api/proof]", err);
     return NextResponse.json({ error: "Proof generation failed" }, { status: 500 });
