@@ -41,33 +41,51 @@ export async function POST(req: NextRequest) {
 
       // Vinyl sticker — custom line item
       const attrs: { key: string; value: string }[] = [
-        { key: "Shape", value: item.shape },
-        { key: "Material", value: item.material },
-        { key: "Size", value: item.size },
+        { key: "Shape",         value: item.shape },
+        { key: "Material",      value: item.material },
+        { key: "Size",          value: item.size },
         { key: "Quantity Tier", value: String(item.tierQty) },
       ];
+      if (item.cutType)      attrs.push({ key: "Cut Type",      value: item.cutType });
       if (item.customWidth)  attrs.push({ key: "Custom Width",  value: `${item.customWidth} in` });
       if (item.customHeight) attrs.push({ key: "Custom Height", value: `${item.customHeight} in` });
       if (item.fileName)     attrs.push({ key: "Design File",   value: item.fileName });
+
       // Design File URL — clean bg-removed image (no cutline overlay), for printing
       const designFileUrl = item.proof?.designUrl ?? item.fileUrl;
       if (designFileUrl && !designFileUrl.startsWith("data:")) {
         attrs.push({ key: "Design File URL", value: designFileUrl });
       }
 
-      if (item.proof?.removedBackground) {
-        attrs.push({ key: "Background Removed", value: "Yes" });
-      }
-      // Design settings as text — visible in Shopify admin
       if (item.proof) {
+        attrs.push({ key: "Proof Shape",    value: item.proof.shape });
+        attrs.push({ key: "Fit Mode",       value: item.proof.fitMode });
+        if (item.proof.borderThickness) {
+          attrs.push({ key: "Cutline Thickness", value: item.proof.borderThickness });
+        }
+        if (item.proof.roundedCorners && item.proof.roundedCorners !== "none") {
+          attrs.push({ key: "Rounded Corners", value: item.proof.roundedCorners });
+        }
+        if (item.proof.cutlineColor) {
+          attrs.push({ key: "Cutline Color", value: item.proof.cutlineColor });
+        }
+        if (item.proof.bgColor) {
+          attrs.push({ key: "Background Color", value: item.proof.bgColor });
+        }
+        attrs.push({ key: "Background Removed", value: item.proof.removedBackground ? "Yes" : "No" });
+
+        // Human-readable summary
         const parts: string[] = [];
-        if (item.proof.shape)          parts.push(`shape: ${item.proof.shape}`);
-        if (item.proof.fitMode)        parts.push(`mode: ${item.proof.fitMode}`);
-        if (item.proof.borderThickness) parts.push(`cutline: ${item.proof.borderThickness}`);
+        if (item.proof.shape)                                           parts.push(`shape: ${item.proof.shape}`);
+        if (item.proof.fitMode)                                         parts.push(`mode: ${item.proof.fitMode}`);
+        if (item.proof.borderThickness)                                 parts.push(`cutline: ${item.proof.borderThickness}`);
+        if (item.proof.cutlineColor)                                    parts.push(`cutline color: ${item.proof.cutlineColor}`);
         if (item.proof.roundedCorners && item.proof.roundedCorners !== "none") parts.push(`corners: ${item.proof.roundedCorners}`);
-        if (item.proof.removedBackground) parts.push("bg removed");
+        if (item.proof.bgColor)                                         parts.push(`bg: ${item.proof.bgColor}`);
+        if (item.proof.removedBackground)                               parts.push("bg removed");
         if (parts.length) attrs.push({ key: "Design Settings", value: parts.join(" · ") });
       }
+
       if (item.instructions) attrs.push({ key: "Instructions", value: item.instructions });
 
       return {

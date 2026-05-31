@@ -24,6 +24,7 @@ export interface ProductCartItem extends CartItemBase {
 
 export interface VinylStickerCartItem extends CartItemBase {
   kind: "vinyl-sticker";
+  cutType?: string;
   shape: string;
   material: string;
   size: string;
@@ -46,6 +47,8 @@ export interface VinylStickerCartItem extends CartItemBase {
     roundedCorners: string;
     removedBackground: boolean;
     lowResolution: boolean;
+    cutlineColor?: string;
+    bgColor?: string;
     changeNote?: string;
   };
 }

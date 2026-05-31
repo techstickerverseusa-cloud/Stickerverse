@@ -1,0 +1,881 @@
+"use client";
+
+import { useState, useRef } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useCart } from "@/lib/cart-store";
+import type { VinylStickerCartItem } from "@/lib/cart-types";
+import PreflightModal, { type ProofResult, type ShapeId as PreflightShapeId } from "./PreflightModal";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type StickerType = "vinyl" | "holographic" | "glitter" | "chrome" | "sheets";
+type CutType    = "die-cut" | "kiss-cut";
+type ShapeId    = "custom" | "circle" | "oval" | "square" | "rectangle";
+type MaterialId = "matte" | "gloss" | "holographic" | "chrome" | "glitter";
+type SizeId     = "2x2" | "3x3" | "4x4" | "5x5" | "custom";
+
+// ─── Config ───────────────────────────────────────────────────────────────────
+
+const TYPE_CONFIG: Record<StickerType, {
+  title: string; subtitle: string; description: string;
+  materials: MaterialId[]; defaultMaterial: MaterialId;
+  basePrice: number; accent: string; accentRgb: string; features: string[];
+}> = {
+  vinyl: {
+    title: "Vinyl Stickers", subtitle: "Perfect for any application. The perfect sticker.",
+    description: "Premium vinyl stickers perfect for laptops, water bottles, and outdoor use — waterproof, scratch-resistant, and dishwasher safe.",
+    materials: ["matte", "gloss"], defaultMaterial: "matte", basePrice: 2.00,
+    accent: "#6366f1", accentRgb: "99,102,241",
+    features: ["Waterproof", "UV Resistant", "Scratch-Proof", "Dishwasher Safe"],
+  },
+  holographic: {
+    title: "Holographic Stickers", subtitle: "Rainbow shimmer effect that turns heads.",
+    description: "Holographic vinyl stickers with a stunning rainbow effect. Waterproof and UV-resistant.",
+    materials: ["holographic"], defaultMaterial: "holographic", basePrice: 2.50,
+    accent: "#a855f7", accentRgb: "168,85,247",
+    features: ["Rainbow Shimmer", "Waterproof", "UV Resistant", "Eye-Catching"],
+  },
+  glitter: {
+    title: "Glitter Stickers", subtitle: "Sparkle and shine on every surface.",
+    description: "Eye-catching glitter vinyl stickers. Durable, waterproof, and packed with sparkle.",
+    materials: ["glitter"], defaultMaterial: "glitter", basePrice: 2.75,
+    accent: "#eab308", accentRgb: "234,179,8",
+    features: ["Glitter Finish", "Waterproof", "Durable", "Sparkle Effect"],
+  },
+  chrome: {
+    title: "Chrome Stickers", subtitle: "Mirror-like metallic finish. Bold and striking.",
+    description: "Chrome mirror vinyl stickers with a sleek metallic look. Weather-resistant and long-lasting.",
+    materials: ["chrome"], defaultMaterial: "chrome", basePrice: 2.50,
+    accent: "#94a3b8", accentRgb: "148,163,184",
+    features: ["Mirror Finish", "Weather-Resistant", "Long-Lasting", "Metallic"],
+  },
+  sheets: {
+    title: "Sticker Sheets", subtitle: "Multiple designs on a single sheet.",
+    description: "Custom sticker sheets — perfect for variety packs, product packaging, and brand kits.",
+    materials: ["matte", "gloss"], defaultMaterial: "matte", basePrice: 5.00,
+    accent: "#22c55e", accentRgb: "34,197,94",
+    features: ["Multi-Design", "Brand Kits", "Easy Peel", "Variety Packs"],
+  },
+};
+
+// ─── Pricing ──────────────────────────────────────────────────────────────────
+
+const QTY_TIERS = [
+  { qty: 50,   discount: 0  },
+  { qty: 100,  discount: 22 },
+  { qty: 200,  discount: 35 },
+  { qty: 300,  discount: 45 },
+  { qty: 500,  discount: 55 },
+  { qty: 1000, discount: 65 },
+  { qty: 3000, discount: 75 },
+] as const;
+
+// ─── Option data ──────────────────────────────────────────────────────────────
+
+const ALL_MATERIALS: { id: MaterialId; label: string; desc: string; style: React.CSSProperties; badge?: string }[] = [
+  { id: "matte",        label: "Matte",        desc: "Smooth, non-reflective finish",  style: { background: "linear-gradient(160deg,#e8e8e8 0%,#c8c8c8 100%)" } },
+  { id: "gloss",        label: "Gloss",        desc: "Shiny, vibrant colors",          style: { background: "linear-gradient(160deg,#f8f8f8 0%,#d0d8e8 50%,#b8c8d8 100%)" }, badge: "+5%" },
+  { id: "holographic",  label: "Holographic",  desc: "Stunning rainbow shimmer",       style: { background: "linear-gradient(135deg,#ff6b9d 0%,#c44dff 25%,#4d79ff 50%,#00d4aa 75%,#ffd700 100%)" } },
+  { id: "chrome",       label: "Chrome",       desc: "Mirror-like metallic look",      style: { background: "linear-gradient(135deg,#c0c0c0 0%,#f8f8f8 40%,#a8a8a8 70%,#e8e8e8 100%)" } },
+  { id: "glitter",      label: "Glitter",      desc: "Eye-catching sparkle",           style: { background: "linear-gradient(135deg,#ffd700 0%,#ff69b4 40%,#da70d6 70%,#ffd700 100%)" } },
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function fmt(n: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(n);
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export default function StandaloneConfigurator({ stickerType }: { stickerType: StickerType }) {
+  const config = TYPE_CONFIG[stickerType];
+  const availableMaterials = ALL_MATERIALS.filter((m) => (config.materials as string[]).includes(m.id));
+  const { accent, accentRgb } = config;
+
+  const [cutType, setCutType]           = useState<CutType>("die-cut");
+  const [shape, setShape]               = useState<ShapeId>("custom");
+  const [material, setMaterial]         = useState<MaterialId>(config.defaultMaterial);
+  const [sizeId, setSizeId]             = useState<SizeId>("3x3");
+  const [customW, setCustomW]           = useState("");
+  const [customH, setCustomH]           = useState("");
+  const [selectedQty, setSelectedQty]   = useState(100);
+  const [file, setFile]                 = useState<File | null>(null);
+  const [filePreview, setFilePreview]   = useState<string | null>(null);
+  const [dragging, setDragging]         = useState(false);
+  const [instructions, setInstructions] = useState("");
+  const [preflightOpen, setPreflightOpen] = useState(false);
+  const [proofResult, setProofResult]   = useState<ProofResult | null>(null);
+
+  const fileRef = useRef<HTMLInputElement>(null);
+  const { addItem } = useCart();
+  const router = useRouter();
+
+  function tierCalc(qty: number, discount: number) {
+    const perUnit = Math.round(config.basePrice * (1 - discount / 100) * 100) / 100;
+    return { perUnit, total: Math.round(perUnit * qty * 100) / 100 };
+  }
+
+  const activeTier = QTY_TIERS.find((t) => t.qty === selectedQty) ?? QTY_TIERS[0];
+  const { perUnit: activePerUnit, total: activeTotal } = tierCalc(activeTier.qty, activeTier.discount);
+
+  function handleFile(f: File) {
+    setFile(f);
+    setProofResult(null);
+    if (f.type.startsWith("image/")) setFilePreview(URL.createObjectURL(f));
+    else setFilePreview(null);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragging(false);
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  }
+
+  function handleAddToCart() {
+    const sizeLabel = sizeId === "custom" ? `${customW || "?"}×${customH || "?"} in` : sizeId.replace("x", "×") + '"';
+    const materialLabel = ALL_MATERIALS.find((m) => m.id === material)?.label ?? material;
+    const cartItem: Omit<VinylStickerCartItem, "id" | "addedAt"> = {
+      kind: "vinyl-sticker",
+      cutType,
+      title: config.title,
+      subtitle: `${materialLabel} · ${cutType} · ${sizeLabel} · Qty ${activeTier.qty}`,
+      thumbnail: "", unitLabel: "stickers", totalPrice: activeTotal, quantity: activeTier.qty,
+      shape, material,
+      size: sizeId === "custom" ? "custom" : sizeId,
+      customWidth:  sizeId === "custom" && customW ? Number(customW) : undefined,
+      customHeight: sizeId === "custom" && customH ? Number(customH) : undefined,
+      roundedCorners: null, tierQty: activeTier.qty, perUnit: activePerUnit,
+      fileName: file?.name,
+      fileUrl: proofResult?.designUrl ?? proofResult?.shopifyUrl ?? undefined,
+      instructions: instructions || undefined,
+      proof: proofResult
+        ? {
+            status: "approved" as const,
+            proofUrl:          proofResult.shopifyUrl ?? undefined,
+            cutlineUrl:        proofResult.shopifyUrl ?? undefined,
+            designUrl:         proofResult.designUrl  ?? undefined,
+            shape:             proofResult.shape,
+            fitMode:           proofResult.fitMode,
+            borderThickness:   proofResult.borderThickness,
+            roundedCorners:    proofResult.roundedCorners,
+            removedBackground: proofResult.removedBackground,
+            lowResolution: false,
+            cutlineColor: proofResult.cutlineColor,
+            bgColor: proofResult.bgColor,
+          }
+        : undefined,
+    };
+    addItem(cartItem);
+    router.push("/cart");
+  }
+
+  const canProceed = sizeId !== "custom" || (customW !== "" && customH !== "");
+
+  const shapeToPreflightId: Record<ShapeId, PreflightShapeId> = {
+    custom: "die-cut", circle: "circle", oval: "oval", square: "square", rectangle: "rectangle",
+  };
+
+  const activeMaterialStyle = ALL_MATERIALS.find((m) => m.id === material)?.style ?? {};
+
+  return (
+    <>
+      <style>{`
+        @keyframes sc-float {
+          0%,100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+        @keyframes sc-shimmer {
+          0% { transform: translateX(-150%) skewX(-20deg); }
+          100% { transform: translateX(250%) skewX(-20deg); }
+        }
+        @keyframes sc-shine {
+          0% { left: -80%; }
+          100% { left: 130%; }
+        }
+        @keyframes sc-orb1 {
+          0%,100% { transform: translateY(0px) scale(1); }
+          50% { transform: translateY(-20px) scale(1.05); }
+        }
+        @keyframes sc-orb2 {
+          0%,100% { transform: translateY(0px) scale(1); }
+          50% { transform: translateY(15px) scale(0.95); }
+        }
+        .sc-card {
+          transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+        .sc-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+        .sc-opt {
+          position: relative; overflow: hidden;
+          transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
+        }
+        .sc-opt::before {
+          content: '';
+          position: absolute; inset: 0; z-index: 0;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+          transform: translateX(-150%) skewX(-20deg);
+          pointer-events: none;
+        }
+        .sc-opt:hover::before { animation: sc-shimmer 0.55s ease forwards; }
+        .sc-opt > * { position: relative; z-index: 1; }
+        .sc-upload-icon { animation: sc-float 3s ease-in-out infinite; }
+        .sc-cta-active::after {
+          content: '';
+          position: absolute; top: 0; bottom: 0; width: 35%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+          animation: sc-shine 2.8s ease-in-out infinite;
+          pointer-events: none;
+        }
+        .sc-input:focus {
+          outline: none;
+          border-color: rgba(var(--ac), 0.55) !important;
+          box-shadow: 0 0 0 3px rgba(var(--ac), 0.12);
+        }
+        .sc-textarea:focus {
+          outline: none;
+          border-color: rgba(var(--ac), 0.4) !important;
+        }
+      `}</style>
+
+      {preflightOpen && file && (
+        <PreflightModal
+          file={file}
+          initialShape={shapeToPreflightId[shape]}
+          material={material}
+          onApprove={(proof) => { setProofResult(proof); setPreflightOpen(false); }}
+          onClose={(note) => {
+            setPreflightOpen(false);
+            if (note) setInstructions((p) => p ? `${p}\n\nChange Request: ${note}` : `Change Request: ${note}`);
+          }}
+        />
+      )}
+
+      {/* Root — sets --ac CSS variable for use in .sc-input:focus etc. */}
+      <div
+        className="min-h-screen pb-28 overflow-x-hidden"
+        style={{ background: "#040410", "--ac": accentRgb } as React.CSSProperties}
+      >
+        <div className="max-w-400 mx-auto px-4">
+
+          {/* ── Hero ── */}
+          <div
+            className="mt-6 rounded-3xl overflow-hidden relative"
+            style={{
+              background: "linear-gradient(135deg,#0c0c2e 0%,#131050 45%,#0c0c2a 100%)",
+              border: `1px solid rgba(${accentRgb},0.18)`,
+              minHeight: "210px",
+            }}
+          >
+            {/* Orb 1 */}
+            <div style={{
+              position: "absolute", top: "-55%", right: "-4%",
+              width: "520px", height: "520px", borderRadius: "50%",
+              background: `radial-gradient(circle, rgba(${accentRgb},0.13) 0%, transparent 65%)`,
+              animation: "sc-orb1 9s ease-in-out infinite",
+              pointerEvents: "none",
+            }} />
+            {/* Orb 2 */}
+            <div style={{
+              position: "absolute", bottom: "-55%", left: "12%",
+              width: "380px", height: "380px", borderRadius: "50%",
+              background: `radial-gradient(circle, rgba(${accentRgb},0.08) 0%, transparent 65%)`,
+              animation: "sc-orb2 12s ease-in-out infinite",
+              pointerEvents: "none",
+            }} />
+            {/* Grid overlay */}
+            <div style={{
+              position: "absolute", inset: 0,
+              backgroundImage: "linear-gradient(rgba(255,255,255,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.022) 1px,transparent 1px)",
+              backgroundSize: "40px 40px",
+              pointerEvents: "none",
+            }} />
+
+            <div className="relative z-10 flex items-center justify-between gap-8 px-8 py-8">
+              <div className="flex-1 min-w-0">
+                <p style={{
+                  fontSize: "9px", letterSpacing: "0.45em", textTransform: "uppercase",
+                  fontFamily: "var(--font-orbitron)", color: `rgba(${accentRgb},0.75)`,
+                  marginBottom: "0.5rem",
+                }}>Custom Stickers</p>
+
+                <h1 style={{
+                  fontFamily: "var(--font-orbitron)", fontWeight: 900,
+                  fontSize: "clamp(1.75rem,3.5vw,2.75rem)", lineHeight: 1.1, marginBottom: "0.55rem",
+                  background: `linear-gradient(135deg,#fff 0%,rgba(${accentRgb},1) 55%,rgba(${accentRgb},0.65) 100%)`,
+                  WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+                }}>
+                  {config.title}
+                </h1>
+
+                <p style={{ color: `rgba(${accentRgb},0.85)`, fontSize: "0.875rem", fontWeight: 600, marginBottom: "0.7rem" }}>
+                  {config.subtitle}
+                </p>
+
+                <p className="hidden sm:block" style={{ color: "rgba(200,210,255,0.5)", fontSize: "0.75rem", lineHeight: 1.75, maxWidth: "500px", marginBottom: "1.1rem" }}>
+                  {config.description}
+                </p>
+
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem" }}>
+                  {config.features.map((f) => (
+                    <span key={f} style={{
+                      fontSize: "9px", fontFamily: "var(--font-orbitron)", letterSpacing: "0.12em",
+                      textTransform: "uppercase", padding: "5px 12px", borderRadius: "100px",
+                      border: `1px solid rgba(${accentRgb},0.3)`,
+                      background: `rgba(${accentRgb},0.1)`,
+                      color: `rgba(${accentRgb},0.95)`,
+                    }}>{f}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Floating material swatch */}
+              <div className="hidden md:flex flex-col items-center gap-3 shrink-0">
+                <div style={{
+                  width: "88px", height: "88px", borderRadius: "50%",
+                  ...activeMaterialStyle,
+                  border: `2px solid rgba(${accentRgb},0.45)`,
+                  boxShadow: `0 0 32px rgba(${accentRgb},0.45),0 0 72px rgba(${accentRgb},0.18)`,
+                  animation: "sc-float 4s ease-in-out infinite",
+                }} />
+                <p style={{
+                  fontSize: "8px", fontFamily: "var(--font-orbitron)", letterSpacing: "0.35em",
+                  textTransform: "uppercase", color: `rgba(${accentRgb},0.6)`,
+                }}>
+                  {ALL_MATERIALS.find((m) => m.id === material)?.label}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ── 4-step grid ── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-4">
+
+            {/* ── 01 Shape ── */}
+            <div className="sc-card rounded-[20px] p-5 flex flex-col gap-3.5 relative overflow-hidden"
+              style={{ background: "linear-gradient(145deg,#08082a 0%,#0c0c32 100%)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{
+                position: "absolute", top: "-8px", right: "14px",
+                fontSize: "76px", fontFamily: "var(--font-orbitron)", fontWeight: 900,
+                color: "rgba(255,255,255,0.025)", lineHeight: 1, userSelect: "none", pointerEvents: "none",
+              }}>01</div>
+
+              <div className="flex items-center gap-2.5 relative">
+                <div style={{
+                  width: "32px", height: "32px", borderRadius: "10px",
+                  background: `rgba(${accentRgb},0.14)`, border: `1px solid rgba(${accentRgb},0.3)`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2">
+                    <path d="M12 2C6.5 2 3 6.5 3 11c0 5.5 4 10 9 11 5-1 9-5.5 9-11 0-4.5-3.5-9-9-9z"/>
+                  </svg>
+                </div>
+                <h2 style={{ fontFamily: "var(--font-orbitron)", fontSize: "0.7rem", fontWeight: 700, color: "white", letterSpacing: "0.06em" }}>
+                  Select a Shape
+                </h2>
+              </div>
+
+              {/* Die-cut / Kiss-cut sliding toggle */}
+              <div style={{
+                position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr",
+                background: "#07071e", borderRadius: "12px", padding: "4px",
+                border: "1px solid rgba(255,255,255,0.06)",
+              }}>
+                <div style={{
+                  position: "absolute", top: "4px", bottom: "4px",
+                  left: cutType === "die-cut" ? "4px" : "calc(50% + 2px)",
+                  width: "calc(50% - 6px)",
+                  background: `linear-gradient(135deg,${accent}cc,${accent})`,
+                  borderRadius: "8px",
+                  transition: "left 0.28s cubic-bezier(0.34,1.56,0.64,1)",
+                  boxShadow: `0 0 14px rgba(${accentRgb},0.4)`,
+                }} />
+                {([
+                  { id: "die-cut"  as CutType, label: "Die Cut",  sub: "Shape-cut" },
+                  { id: "kiss-cut" as CutType, label: "Kiss Cut", sub: "On backing" },
+                ]).map((ct) => (
+                  <button key={ct.id} onClick={() => setCutType(ct.id)}
+                    style={{
+                      position: "relative", zIndex: 1, padding: "8px 4px", borderRadius: "8px",
+                      cursor: "pointer", border: "none", background: "transparent", textAlign: "center",
+                    }}
+                  >
+                    <div style={{ fontSize: "10px", fontWeight: 700, fontFamily: "var(--font-orbitron)", color: cutType === ct.id ? "white" : "rgba(255,255,255,0.32)", transition: "color 0.2s" }}>
+                      {ct.label}
+                    </div>
+                    <div style={{ fontSize: "8px", marginTop: "2px", color: cutType === ct.id ? "rgba(255,255,255,0.65)" : "rgba(255,255,255,0.18)", transition: "color 0.2s" }}>
+                      {ct.sub}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom shape featured */}
+              <button className="sc-opt" onClick={() => setShape("custom")} style={{
+                borderRadius: "14px", padding: "13px 14px", cursor: "pointer",
+                border: `1px solid ${shape === "custom" ? `rgba(${accentRgb},0.55)` : "rgba(255,255,255,0.07)"}`,
+                background: shape === "custom" ? `rgba(${accentRgb},0.1)` : "rgba(255,255,255,0.03)",
+                boxShadow: shape === "custom" ? `0 0 22px rgba(${accentRgb},0.22),inset 0 0 20px rgba(${accentRgb},0.05)` : "none",
+                display: "flex", alignItems: "center", gap: "12px", width: "100%", textAlign: "left",
+              }}>
+                <svg viewBox="0 0 40 40" style={{ width: "34px", height: "34px", flexShrink: 0 }} fill="none"
+                  stroke={shape === "custom" ? accent : "#4b5563"} strokeWidth="2">
+                  <path d="M20 4 C27 3 36 9 37 18 C38 27 31 36 22 38 C13 40 4 34 3 25 C2 16 10 6 20 4Z" strokeLinejoin="round"/>
+                </svg>
+                <div>
+                  <p style={{ fontSize: "0.8125rem", fontWeight: 700, color: "white" }}>Custom Shape</p>
+                  <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.38)", marginTop: "2px" }}>Cut to your artwork outline</p>
+                </div>
+                {shape === "custom" && (
+                  <div style={{
+                    marginLeft: "auto", width: "20px", height: "20px", borderRadius: "50%", flexShrink: 0,
+                    background: accent, display: "flex", alignItems: "center", justifyContent: "center",
+                    boxShadow: `0 0 8px rgba(${accentRgb},0.7)`,
+                  }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                )}
+              </button>
+
+              {/* 4 shapes grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                {([
+                  { id: "circle" as ShapeId, label: "Circle",
+                    icon: <svg viewBox="0 0 40 40" style={{ width: "30px", height: "30px" }} fill="none" stroke="currentColor" strokeWidth="2"><circle cx="20" cy="20" r="15"/></svg> },
+                  { id: "oval" as ShapeId, label: "Oval",
+                    icon: <svg viewBox="0 0 40 40" style={{ width: "30px", height: "30px" }} fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="20" cy="20" rx="11" ry="16"/></svg> },
+                  { id: "square" as ShapeId, label: "Square",
+                    icon: <svg viewBox="0 0 40 40" style={{ width: "30px", height: "30px" }} fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="5" width="30" height="30" rx="2"/></svg> },
+                  { id: "rectangle" as ShapeId, label: "Rectangle",
+                    icon: <svg viewBox="0 0 40 40" style={{ width: "30px", height: "30px" }} fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="10" width="34" height="20" rx="2"/></svg> },
+                ]).map((s) => (
+                  <button key={s.id} className="sc-opt" onClick={() => setShape(s.id)} style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: "6px",
+                    padding: "12px 8px", borderRadius: "12px", cursor: "pointer",
+                    border: `1px solid ${shape === s.id ? `rgba(${accentRgb},0.55)` : "rgba(255,255,255,0.07)"}`,
+                    background: shape === s.id ? `rgba(${accentRgb},0.1)` : "rgba(255,255,255,0.03)",
+                    boxShadow: shape === s.id ? `0 0 16px rgba(${accentRgb},0.2)` : "none",
+                    color: shape === s.id ? accent : "#4b5563",
+                  }}>
+                    {s.icon}
+                    <span style={{ fontSize: "9px", fontWeight: 600, fontFamily: "var(--font-orbitron)", letterSpacing: "0.08em", color: shape === s.id ? accent : "rgba(255,255,255,0.38)" }}>
+                      {s.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── 02 Material ── */}
+            <div className="sc-card rounded-[20px] p-5 flex flex-col gap-3 relative overflow-hidden"
+              style={{ background: "linear-gradient(145deg,#08082a 0%,#0c0c32 100%)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{
+                position: "absolute", top: "-8px", right: "14px",
+                fontSize: "76px", fontFamily: "var(--font-orbitron)", fontWeight: 900,
+                color: "rgba(255,255,255,0.025)", lineHeight: 1, userSelect: "none", pointerEvents: "none",
+              }}>02</div>
+
+              <div className="flex items-center gap-2.5 relative">
+                <div style={{
+                  width: "32px", height: "32px", borderRadius: "10px",
+                  background: `rgba(${accentRgb},0.14)`, border: `1px solid rgba(${accentRgb},0.3)`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2">
+                    <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+                  </svg>
+                </div>
+                <h2 style={{ fontFamily: "var(--font-orbitron)", fontSize: "0.7rem", fontWeight: 700, color: "white", letterSpacing: "0.06em" }}>
+                  Material
+                </h2>
+              </div>
+
+              <div className="flex flex-col gap-2 flex-1">
+                {availableMaterials.map((m) => (
+                  <button key={m.id} className="sc-opt" onClick={() => setMaterial(m.id)} style={{
+                    display: "flex", alignItems: "center", gap: "12px", padding: "12px",
+                    borderRadius: "14px", cursor: "pointer", width: "100%", textAlign: "left",
+                    border: `1px solid ${material === m.id ? `rgba(${accentRgb},0.55)` : "rgba(255,255,255,0.07)"}`,
+                    background: material === m.id ? `rgba(${accentRgb},0.1)` : "rgba(255,255,255,0.03)",
+                    boxShadow: material === m.id ? `0 0 22px rgba(${accentRgb},0.2),inset 0 0 20px rgba(${accentRgb},0.04)` : "none",
+                  }}>
+                    <div style={{
+                      width: "48px", height: "48px", borderRadius: "12px", flexShrink: 0,
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      boxShadow: material === m.id ? `0 0 12px rgba(${accentRgb},0.35)` : "none",
+                      ...m.style,
+                    }} />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: "0.8125rem", fontWeight: 700, color: "white" }}>{m.label}</p>
+                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.38)", marginTop: "2px" }}>{m.desc}</p>
+                      {m.badge && (
+                        <span style={{
+                          display: "inline-block", marginTop: "4px", fontSize: "8px", fontWeight: 700,
+                          padding: "2px 8px", borderRadius: "100px", fontFamily: "var(--font-orbitron)",
+                          background: `rgba(${accentRgb},0.2)`, color: accent,
+                        }}>{m.badge}</span>
+                      )}
+                    </div>
+                    {material === m.id && (
+                      <div style={{
+                        width: "20px", height: "20px", borderRadius: "50%", flexShrink: 0,
+                        background: accent, display: "flex", alignItems: "center", justifyContent: "center",
+                        boxShadow: `0 0 8px rgba(${accentRgb},0.7)`,
+                      }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── 03 Size ── */}
+            <div className="sc-card rounded-[20px] p-5 flex flex-col gap-3 relative overflow-hidden"
+              style={{ background: "linear-gradient(145deg,#08082a 0%,#0c0c32 100%)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{
+                position: "absolute", top: "-8px", right: "14px",
+                fontSize: "76px", fontFamily: "var(--font-orbitron)", fontWeight: 900,
+                color: "rgba(255,255,255,0.025)", lineHeight: 1, userSelect: "none", pointerEvents: "none",
+              }}>03</div>
+
+              <div className="flex items-center justify-between relative">
+                <div className="flex items-center gap-2.5">
+                  <div style={{
+                    width: "32px", height: "32px", borderRadius: "10px",
+                    background: `rgba(${accentRgb},0.14)`, border: `1px solid rgba(${accentRgb},0.3)`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2">
+                      <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                      <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                    </svg>
+                  </div>
+                  <h2 style={{ fontFamily: "var(--font-orbitron)", fontSize: "0.7rem", fontWeight: 700, color: "white", letterSpacing: "0.06em" }}>
+                    Select a Size
+                  </h2>
+                </div>
+                <span style={{ fontSize: "9px", color: accent, textDecoration: "underline", cursor: "pointer", fontFamily: "var(--font-orbitron)", letterSpacing: "0.08em" }}>
+                  Size guide
+                </span>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                {([
+                  { id: "2x2" as SizeId, label: "Small",   sub: '2"', r: 13 },
+                  { id: "3x3" as SizeId, label: "Medium",  sub: '3"', r: 17 },
+                  { id: "4x4" as SizeId, label: "Large",   sub: '4"', r: 21 },
+                  { id: "5x5" as SizeId, label: "X-Large", sub: '5"', r: 25 },
+                ]).map((s) => (
+                  <button key={s.id} className="sc-opt" onClick={() => setSizeId(s.id)} style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
+                    padding: "12px 8px", borderRadius: "14px", cursor: "pointer",
+                    border: `1px solid ${sizeId === s.id ? `rgba(${accentRgb},0.55)` : "rgba(255,255,255,0.07)"}`,
+                    background: sizeId === s.id ? `rgba(${accentRgb},0.1)` : "rgba(255,255,255,0.03)",
+                    boxShadow: sizeId === s.id ? `0 0 18px rgba(${accentRgb},0.2)` : "none",
+                  }}>
+                    <svg viewBox="0 0 58 58" style={{ width: "50px", height: "50px" }}>
+                      <circle cx="29" cy="29" r={s.r}
+                        fill={sizeId === s.id ? `rgba(${accentRgb},0.15)` : "rgba(255,255,255,0.04)"}
+                        stroke={sizeId === s.id ? accent : "rgba(255,255,255,0.18)"}
+                        strokeWidth="1.5"
+                      />
+                    </svg>
+                    <div style={{ textAlign: "center" }}>
+                      <p style={{ fontSize: "10px", fontWeight: 700, fontFamily: "var(--font-orbitron)", color: sizeId === s.id ? "white" : "rgba(255,255,255,0.45)" }}>{s.label}</p>
+                      <p style={{ fontSize: "9px", marginTop: "1px", color: sizeId === s.id ? accent : "rgba(255,255,255,0.28)" }}>{s.sub}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <button className="sc-opt" onClick={() => setSizeId("custom")} style={{
+                width: "100%", padding: "10px", borderRadius: "12px", cursor: "pointer",
+                border: `1px solid ${sizeId === "custom" ? `rgba(${accentRgb},0.55)` : "rgba(255,255,255,0.07)"}`,
+                background: sizeId === "custom" ? `rgba(${accentRgb},0.1)` : "rgba(255,255,255,0.03)",
+                boxShadow: sizeId === "custom" ? `0 0 16px rgba(${accentRgb},0.2)` : "none",
+                fontSize: "11px", fontWeight: 600, fontFamily: "var(--font-orbitron)", letterSpacing: "0.08em",
+                color: sizeId === "custom" ? "white" : "rgba(255,255,255,0.38)",
+              }}>
+                Custom Size
+              </button>
+
+              {sizeId === "custom" && (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <input
+                    type="number" min="0.5" max="24" step="0.25"
+                    value={customW} onChange={(e) => setCustomW(e.target.value)}
+                    placeholder="W (in)"
+                    className="sc-input"
+                    style={{
+                      flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+                      color: "white", fontSize: "13px", padding: "8px 12px", borderRadius: "10px",
+                    }}
+                  />
+                  <span style={{ color: "rgba(255,255,255,0.28)", fontSize: "14px" }}>×</span>
+                  <input
+                    type="number" min="0.5" max="24" step="0.25"
+                    value={customH} onChange={(e) => setCustomH(e.target.value)}
+                    placeholder="H (in)"
+                    className="sc-input"
+                    style={{
+                      flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+                      color: "white", fontSize: "13px", padding: "8px 12px", borderRadius: "10px",
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* ── 04 Quantity ── */}
+            <div className="sc-card rounded-[20px] p-5 flex flex-col gap-2 relative overflow-hidden"
+              style={{ background: "linear-gradient(145deg,#08082a 0%,#0c0c32 100%)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{
+                position: "absolute", top: "-8px", right: "14px",
+                fontSize: "76px", fontFamily: "var(--font-orbitron)", fontWeight: 900,
+                color: "rgba(255,255,255,0.025)", lineHeight: 1, userSelect: "none", pointerEvents: "none",
+              }}>04</div>
+
+              <div className="flex items-center gap-2.5 relative">
+                <div style={{
+                  width: "32px", height: "32px", borderRadius: "10px",
+                  background: `rgba(${accentRgb},0.14)`, border: `1px solid rgba(${accentRgb},0.3)`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontFamily: "var(--font-orbitron)", fontSize: "13px", fontWeight: 900, color: accent,
+                }}>#</div>
+                <h2 style={{ fontFamily: "var(--font-orbitron)", fontSize: "0.7rem", fontWeight: 700, color: "white", letterSpacing: "0.06em" }}>
+                  Quantity
+                </h2>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px", flex: 1 }}>
+                {QTY_TIERS.map((tier) => {
+                  const { perUnit, total } = tierCalc(tier.qty, tier.discount);
+                  const active = selectedQty === tier.qty;
+                  return (
+                    <button key={tier.qty} className="sc-opt" onClick={() => setSelectedQty(tier.qty)} style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "9px 12px", borderRadius: "10px", cursor: "pointer",
+                      border: `1px solid ${active ? `rgba(${accentRgb},0.5)` : "transparent"}`,
+                      background: active ? `rgba(${accentRgb},0.14)` : "transparent",
+                      boxShadow: active ? `0 0 16px rgba(${accentRgb},0.2)` : "none",
+                    }}>
+                      <span style={{
+                        fontFamily: "var(--font-orbitron)", fontSize: "11px", fontWeight: 700,
+                        color: active ? "white" : "rgba(255,255,255,0.55)",
+                      }}>
+                        {tier.qty >= 1000 ? `${tier.qty / 1000},000` : tier.qty}
+                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                        <span style={{ fontSize: "12px", fontWeight: 600, color: active ? "white" : "rgba(255,255,255,0.7)" }}>
+                          {fmt(total)}
+                        </span>
+                        {tier.discount > 0 && (
+                          <span style={{
+                            fontSize: "8px", fontWeight: 700, padding: "2px 7px", borderRadius: "100px",
+                            fontFamily: "var(--font-orbitron)",
+                            background: active ? `rgba(${accentRgb},0.3)` : "rgba(34,197,94,0.14)",
+                            color: active ? accent : "#22c55e",
+                          }}>
+                            -{tier.discount}%
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Total card */}
+              <div style={{
+                marginTop: "6px", borderRadius: "14px", padding: "14px 16px",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                background: `linear-gradient(135deg,rgba(${accentRgb},0.2) 0%,rgba(${accentRgb},0.1) 100%)`,
+                border: `1px solid rgba(${accentRgb},0.28)`,
+                boxShadow: `0 0 22px rgba(${accentRgb},0.14)`,
+              }}>
+                <div>
+                  <p style={{ fontSize: "8px", fontFamily: "var(--font-orbitron)", color: `rgba(${accentRgb},0.65)`, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "3px" }}>Total</p>
+                  <p style={{ fontFamily: "var(--font-orbitron)", fontSize: "1.125rem", fontWeight: 900, color: "white" }}>{fmt(activeTotal)}</p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <p style={{ fontSize: "8px", fontFamily: "var(--font-orbitron)", color: `rgba(${accentRgb},0.65)`, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "3px" }}>Per unit</p>
+                  <p style={{ fontSize: "0.875rem", fontWeight: 700, color: `rgba(${accentRgb},0.9)` }}>{fmt(activePerUnit)}</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* ── Upload ── */}
+          <div style={{ marginTop: "1rem" }}>
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+              onClick={() => fileRef.current?.click()}
+              style={{
+                borderRadius: "20px",
+                border: `2px dashed ${dragging ? accent : proofResult ? "#22c55e" : file ? `rgba(${accentRgb},0.4)` : "rgba(255,255,255,0.11)"}`,
+                background: dragging ? `rgba(${accentRgb},0.07)` : proofResult ? "rgba(34,197,94,0.04)" : file ? `rgba(${accentRgb},0.04)` : "#06061a",
+                boxShadow: dragging ? `0 0 32px rgba(${accentRgb},0.22)` : "none",
+                cursor: "pointer", minHeight: "160px",
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                gap: "16px", padding: "2.5rem",
+                transition: "all 0.25s ease",
+              }}
+            >
+              <input
+                ref={fileRef} type="file"
+                accept="image/png,image/jpeg,application/pdf,image/svg+xml"
+                style={{ display: "none" }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+              />
+
+              {proofResult ? (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+                  {filePreview && <Image src={filePreview} alt="Approved proof" width={96} height={96} className="max-h-24 object-contain" />}
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{
+                      width: "26px", height: "26px", borderRadius: "50%",
+                      background: "rgba(34,197,94,0.18)", border: "1px solid rgba(34,197,94,0.5)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#22c55e", fontFamily: "var(--font-orbitron)", letterSpacing: "0.06em" }}>
+                      Proof Approved
+                    </span>
+                  </div>
+                  <p style={{ fontSize: "11px", color: "rgba(34,197,94,0.65)" }}>Ready to add to cart</p>
+                </div>
+              ) : filePreview ? (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+                  <div style={{ position: "relative", width: "96px", height: "96px" }}>
+                    <Image src={filePreview} alt="Design preview" fill className="object-contain" />
+                  </div>
+                  <p style={{ fontSize: "13px", fontWeight: 600, color: "white" }}>{file?.name}</p>
+                  <p style={{ fontSize: "11px", color: `rgba(${accentRgb},0.7)` }}>Click &quot;View Proof&quot; below to continue →</p>
+                </div>
+              ) : (
+                <>
+                  <div className="sc-upload-icon" style={{
+                    width: "64px", height: "64px", borderRadius: "50%",
+                    background: `rgba(${accentRgb},0.1)`, border: `1px solid rgba(${accentRgb},0.2)`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="1.5">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" x2="12" y1="3" y2="15"/>
+                    </svg>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <p style={{ fontSize: "15px", fontWeight: 600, color: "white", marginBottom: "6px" }}>Drag or click to upload your file</p>
+                    <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.32)" }}>PNG, JPG, SVG, PDF · Max 25 MB · 1 file per order</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {file && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setFile(null); setFilePreview(null); setProofResult(null); if (fileRef.current) fileRef.current.value = ""; }}
+                className="hover:text-white transition-colors duration-200"
+                style={{ marginTop: "8px", fontSize: "11px", color: "rgba(255,255,255,0.28)", cursor: "pointer", background: "none", border: "none" }}
+              >
+                × Remove file
+              </button>
+            )}
+
+            <div style={{ marginTop: "1rem", paddingBottom: "1rem" }}>
+              <textarea
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                rows={2}
+                placeholder="Special instructions (optional) — color notes, finishing requests…"
+                className="sc-textarea placeholder:text-gray-700"
+                style={{
+                  width: "100%", borderRadius: "14px",
+                  background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)",
+                  color: "white", fontSize: "13px", padding: "14px 16px",
+                  resize: "none", lineHeight: 1.7,
+                }}
+              />
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* ── Sticky CTA ── */}
+      <div style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
+        padding: "14px 16px", borderTop: "1px solid rgba(255,255,255,0.06)",
+        background: "rgba(4,4,16,0.98)",
+      }}>
+        <div style={{ maxWidth: "900px", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+          {proofResult ? (
+            <button
+              onClick={handleAddToCart}
+              disabled={!canProceed}
+              style={{
+                width: "100%", maxWidth: "640px", padding: "16px", borderRadius: "14px",
+                cursor: canProceed ? "pointer" : "not-allowed",
+                fontFamily: "var(--font-orbitron)", fontSize: "13px", fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase",
+                background: canProceed ? "white" : "rgba(255,255,255,0.07)",
+                color: canProceed ? "black" : "rgba(255,255,255,0.22)",
+                border: "none", transition: "all 0.2s ease",
+                position: "relative", overflow: "hidden",
+              }}
+            >
+              Add to Cart →
+            </button>
+          ) : (
+            <button
+              onClick={() => { if (file && canProceed) setPreflightOpen(true); }}
+              disabled={!file || !canProceed}
+              className={file && canProceed ? "sc-cta-active" : ""}
+              style={{
+                width: "100%", maxWidth: "640px", padding: "16px", borderRadius: "14px",
+                cursor: file && canProceed ? "pointer" : "not-allowed",
+                fontFamily: "var(--font-orbitron)", fontSize: "13px", fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase",
+                background: file && canProceed
+                  ? `linear-gradient(135deg,${accent} 0%,rgba(${accentRgb},0.72) 100%)`
+                  : "rgba(255,255,255,0.05)",
+                color: file && canProceed ? "white" : "rgba(255,255,255,0.2)",
+                border: `1px solid ${file && canProceed ? `rgba(${accentRgb},0.4)` : "rgba(255,255,255,0.05)"}`,
+                boxShadow: file && canProceed ? `0 4px 32px rgba(${accentRgb},0.45)` : "none",
+                transition: "all 0.22s ease",
+                position: "relative", overflow: "hidden",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
+              }}
+            >
+              {file ? (
+                <>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  View Proof →
+                </>
+              ) : (
+                <>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" x2="12" y1="3" y2="15"/>
+                  </svg>
+                  Upload Artwork to Continue
+                </>
+              )}
+            </button>
+          )}
+          <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.28)" }}>
+            Preview your design, then we&apos;ll add it to your cart and take you to checkout
+          </p>
+        </div>
+      </div>
+    </>
+  );
+}

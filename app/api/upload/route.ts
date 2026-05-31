@@ -16,9 +16,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "File too large (max 25 MB)" }, { status: 400 });
 
     const fileBuffer = Buffer.from(await file.arrayBuffer());
-    const originalUrl = `data:${file.type};base64,${fileBuffer.toString("base64")}`;
 
-    let processedUrl = originalUrl;
+    let processedUrl: string | null = null;
     let removedBackground = false;
 
     if (file.type.startsWith("image/") && file.type !== "image/svg+xml") {
@@ -41,12 +40,13 @@ export async function POST(req: NextRequest) {
             removedBackground = true;
           }
         } catch {
-          // fall through — use original
+          // fall through — no bg removal
         }
       }
     }
 
-    return NextResponse.json({ originalUrl, processedUrl, removedBackground });
+    // Return only processedUrl (null if no bg removal — client uses its own object URL for original)
+    return NextResponse.json({ processedUrl, removedBackground });
   } catch (err) {
     console.error("[/api/upload]", err);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });

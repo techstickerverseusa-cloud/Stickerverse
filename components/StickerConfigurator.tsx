@@ -11,16 +11,18 @@ import PreflightModal, { type ProofResult, type ShapeId as PreflightShapeId } fr
 // ─── Pricing tiers ────────────────────────────────────────────────────────────
 
 const QTY_TIERS = [
-  { qty: 25, discount: 0 },
-  { qty: 50, discount: 12 },
-  { qty: 100, discount: 22 },
-  { qty: 250, discount: 35 },
-  { qty: 500, discount: 45 },
-  { qty: 1000, discount: 55 },
+  { qty: 50,   discount: 0  },
+  { qty: 100,  discount: 22 },
+  { qty: 200,  discount: 35 },
+  { qty: 300,  discount: 45 },
+  { qty: 500,  discount: 55 },
+  { qty: 1000, discount: 65 },
+  { qty: 3000, discount: 75 },
 ] as const;
 
 // ─── Shape / material / size options ─────────────────────────────────────────
 
+type CutType  = "die-cut" | "kiss-cut";
 type ShapeId = "die-cut" | "circle" | "oval" | "square" | "rectangle";
 type MaterialId = "matte" | "gloss" | "holographic" | "chrome";
 type SizeId = "2x2" | "3x3" | "4x4" | "5x5" | "custom";
@@ -64,11 +66,11 @@ const MATERIALS: { id: MaterialId; label: string; desc: string; style: React.CSS
 ];
 
 const SIZES: { id: SizeId; label: string; sub: string }[] = [
-  { id: "2x2", label: "2\"", sub: "2×2 in" },
-  { id: "3x3", label: "3\"", sub: "3×3 in" },
-  { id: "4x4", label: "4\"", sub: "4×4 in" },
-  { id: "5x5", label: "5\"", sub: "5×5 in" },
-  { id: "custom", label: "Custom", sub: "Your size" },
+  { id: "2x2",   label: "Small",   sub: "2\"" },
+  { id: "3x3",   label: "Medium",  sub: "3\"" },
+  { id: "4x4",   label: "Large",   sub: "4\"" },
+  { id: "5x5",   label: "X-Large", sub: "5\"" },
+  { id: "custom", label: "Custom",  sub: "Your size" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -79,6 +81,34 @@ function detectDefaultMaterial(title: string): MaterialId {
   if (t.includes("chrome") || t.includes("silver")) return "chrome";
   if (t.includes("gloss")) return "gloss";
   return "matte";
+}
+
+function getAvailableMaterials(title: string): MaterialId[] {
+  const t = title.toLowerCase();
+  if (t.includes("holographic") || t.includes("holo")) return ["holographic"];
+  if (t.includes("chrome") || t.includes("silver")) return ["chrome"];
+  // All other products (vinyl, kiss cut, clear, sticker sheets, etc.) → matte + gloss only
+  return ["matte", "gloss"];
+}
+
+interface DealInfo {
+  isDeal: boolean;
+  dealQty: number | null;
+  dealSize: SizeId | null;
+}
+
+function detectDealInfo(title: string): DealInfo {
+  // Match titles like "150 3" Custom Die Cut Stickers" → qty=150, size=3"
+  const match = title.match(/^(\d+)\s+(\d+(?:\.\d+)?)["""]/);
+  if (match) {
+    const qty = parseInt(match[1]);
+    const sizeMap: Record<string, SizeId> = { "2": "2x2", "3": "3x3", "4": "4x4", "5": "5x5" };
+    return { isDeal: true, dealQty: qty, dealSize: sizeMap[match[2]] ?? null };
+  }
+  if (title.toLowerCase().includes("deal") || title.toLowerCase().includes("bundle")) {
+    return { isDeal: true, dealQty: null, dealSize: null };
+  }
+  return { isDeal: false, dealQty: null, dealSize: null };
 }
 
 function fmt(amount: number, code = "USD") {
@@ -156,13 +186,16 @@ function Section({ num, title, children }: { num: string; title: string; childre
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function StickerConfigurator({ product }: { product: ShopifyProduct }) {
+  const dealInfo = detectDealInfo(product.title);
+
   const [activeImg, setActiveImg] = useState(0);
+  const [cutType, setCutType] = useState<CutType>("die-cut");
   const [shape, setShape] = useState<ShapeId>("die-cut");
   const [material, setMaterial] = useState<MaterialId>(() => detectDefaultMaterial(product.title));
-  const [sizeId, setSizeId] = useState<SizeId>("3x3");
+  const [sizeId, setSizeId] = useState<SizeId>(dealInfo.dealSize ?? "3x3");
   const [customW, setCustomW] = useState("");
   const [customH, setCustomH] = useState("");
-  const [selectedQty, setSelectedQty] = useState(50);
+  const [selectedQty, setSelectedQty] = useState(dealInfo.dealQty ?? 100);
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -172,6 +205,7 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
   const fileRef = useRef<HTMLInputElement>(null);
   const { addItem } = useCart();
   const router = useRouter();
+  const availableMaterials = MATERIALS.filter((m) => getAvailableMaterials(product.title).includes(m.id));
 
   const images =
     product.images.length > 0
@@ -192,8 +226,12 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
     return { perUnit, total };
   }
 
-  const activeTier = QTY_TIERS.find((t) => t.qty === selectedQty) ?? QTY_TIERS[1];
-  const { perUnit: activePerUnit, total: activeTotal } = tierCalc(activeTier.qty, activeTier.discount);
+  const activeTier = QTY_TIERS.find((t) => t.qty === selectedQty) ?? QTY_TIERS[0];
+  const dealTotal = dealInfo.isDeal && dealInfo.dealQty ? baseUnitPrice * dealInfo.dealQty : null;
+  const dealPerUnit = dealInfo.isDeal && dealInfo.dealQty ? baseUnitPrice : null;
+  const { perUnit: tierPerUnit, total: tierTotal } = tierCalc(activeTier.qty, activeTier.discount);
+  const activePerUnit = dealPerUnit ?? tierPerUnit;
+  const activeTotal   = dealTotal   ?? tierTotal;
 
   // File handling
   function handleFile(f: File) {
@@ -296,14 +334,24 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
                 src={proofResult.processedUrl}
                 alt="Approved proof"
                 className="max-w-[80%] max-h-[80%] object-contain"
-                style={{
-                  filter: [
-                    `drop-shadow(${proofResult.borderThickness === "thin" ? 2 : proofResult.borderThickness === "normal" ? 4 : 8}px 0 0 #00ff44)`,
-                    `drop-shadow(-${proofResult.borderThickness === "thin" ? 2 : proofResult.borderThickness === "normal" ? 4 : 8}px 0 0 #00ff44)`,
-                    `drop-shadow(0 ${proofResult.borderThickness === "thin" ? 2 : proofResult.borderThickness === "normal" ? 4 : 8}px 0 #00ff44)`,
-                    `drop-shadow(0 -${proofResult.borderThickness === "thin" ? 2 : proofResult.borderThickness === "normal" ? 4 : 8}px 0 #00ff44)`,
-                  ].join(" "),
-                }}
+                style={(() => {
+                  const d = proofResult.borderThickness === "thin" ? 2 : proofResult.borderThickness === "normal" ? 4 : 8;
+                  const c = proofResult.cutlineColor ?? "#ffffff";
+                  const d2 = Math.round(d * 0.71);
+                  const d3 = Math.round(d * 0.4);
+                  return {
+                    filter: [
+                      `drop-shadow(${d}px 0 0 ${c})`, `drop-shadow(-${d}px 0 0 ${c})`,
+                      `drop-shadow(0 ${d}px 0 ${c})`, `drop-shadow(0 -${d}px 0 ${c})`,
+                      `drop-shadow(${d2}px ${d2}px 0 ${c})`, `drop-shadow(-${d2}px -${d2}px 0 ${c})`,
+                      `drop-shadow(${d2}px -${d2}px 0 ${c})`, `drop-shadow(-${d2}px ${d2}px 0 ${c})`,
+                      `drop-shadow(${d}px ${d3}px 0 ${c})`, `drop-shadow(-${d}px ${d3}px 0 ${c})`,
+                      `drop-shadow(${d}px -${d3}px 0 ${c})`, `drop-shadow(-${d}px -${d3}px 0 ${c})`,
+                      `drop-shadow(${d3}px ${d}px 0 ${c})`, `drop-shadow(-${d3}px ${d}px 0 ${c})`,
+                      `drop-shadow(${d3}px -${d}px 0 ${c})`, `drop-shadow(-${d3}px -${d}px 0 ${c})`,
+                    ].join(" "),
+                  };
+                })()}
               />
             ) : images[activeImg] ? (
               <Image
@@ -409,8 +457,33 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
             )}
           </div>
 
-          {/* 01 — Shape */}
-          <Section num="01" title="Choose Shape">
+          {/* 01 — Cut Type */}
+          <Section num="01" title="Select a Cut Type">
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: "die-cut"  as CutType, label: "Die Cut",   desc: "Cut through the backing — sticker follows your artwork's exact shape." },
+                { id: "kiss-cut" as CutType, label: "Kiss Cut",  desc: "Surface layer only — sticker sits on a square backing sheet." },
+              ].map((ct) => (
+                <button
+                  key={ct.id}
+                  onClick={() => setCutType(ct.id)}
+                  className={`flex flex-col items-start gap-1.5 p-4 border text-left transition-all duration-200 ${
+                    cutType === ct.id
+                      ? "border-white bg-white/[0.06] text-white"
+                      : "border-white/10 text-gray-500 hover:border-white/25 hover:text-gray-300"
+                  }`}
+                >
+                  <span className="text-xs font-bold tracking-[0.1em] uppercase" style={{ fontFamily: "var(--font-orbitron)" }}>
+                    {ct.label}
+                  </span>
+                  <span className="text-[10px] text-gray-500 leading-relaxed">{ct.desc}</span>
+                </button>
+              ))}
+            </div>
+          </Section>
+
+          {/* 02 — Shape */}
+          <Section num="02" title="Choose Shape">
             <div className="grid grid-cols-5 gap-2">
               {SHAPES.map((s) => (
                 <button
@@ -434,10 +507,10 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
             </div>
           </Section>
 
-          {/* 02 — Material */}
-          <Section num="02" title="Choose Material">
+          {/* 03 — Material */}
+          <Section num="03" title="Choose Material">
             <div className="grid grid-cols-2 gap-2">
-              {MATERIALS.map((m) => (
+              {availableMaterials.map((m) => (
                 <button
                   key={m.id}
                   onClick={() => setMaterial(m.id)}
@@ -469,8 +542,22 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
             </div>
           </Section>
 
-          {/* 03 — Size */}
-          <Section num="03" title="Choose Size">
+          {/* 04 — Size */}
+          <Section num="04" title="Choose Size">
+            {dealInfo.isDeal && dealInfo.dealSize ? (
+              <div className="flex items-center gap-3 px-4 py-3 border border-white/10 bg-white/[0.02]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-indigo-400">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                </svg>
+                <div>
+                  <p className="text-xs font-bold text-white" style={{ fontFamily: "var(--font-orbitron)" }}>
+                    {SIZES.find((s) => s.id === dealInfo.dealSize)?.label ?? ""} — {SIZES.find((s) => s.id === dealInfo.dealSize)?.sub ?? ""}
+                  </p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Size is fixed for this deal</p>
+                </div>
+              </div>
+            ) : (
+            <>
             <div className="grid grid-cols-5 gap-2 mb-3">
               {SIZES.map((s) => (
                 <button
@@ -527,11 +614,26 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
                 </div>
               </div>
             )}
+            </>
+            )}
           </Section>
 
-          {/* 04 — Quantity */}
-          <Section num="04" title="Quantity &amp; Pricing">
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          {/* 05 — Quantity */}
+          <Section num="05" title="Quantity &amp; Pricing">
+            {dealInfo.isDeal && dealInfo.dealQty ? (
+              <div className="flex items-center gap-3 px-4 py-3 border border-white/10 bg-white/[0.02]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-indigo-400">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>
+                </svg>
+                <div>
+                  <p className="text-xs font-bold text-white" style={{ fontFamily: "var(--font-orbitron)" }}>
+                    {dealInfo.dealQty} Stickers — Deal Price
+                  </p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Quantity is fixed for this deal</p>
+                </div>
+              </div>
+            ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
               {QTY_TIERS.map((tier) => {
                 const { perUnit, total } = tierCalc(tier.qty, tier.discount);
                 const active = selectedQty === tier.qty;
@@ -570,10 +672,11 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
                 );
               })}
             </div>
+            )}
           </Section>
 
-          {/* 05 — Upload */}
-          <Section num="05" title="Upload Your Design">
+          {/* 06 — Upload */}
+          <Section num="06" title="Upload Your Design">
             <div
               onDragOver={(e) => {
                 e.preventDefault();
@@ -670,8 +773,8 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
             )}
           </Section>
 
-          {/* 06 — Instructions */}
-          <Section num="06" title="Special Instructions (Optional)">
+          {/* 07 — Instructions */}
+          <Section num="07" title="Special Instructions (Optional)">
             <textarea
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
@@ -686,9 +789,11 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
             <div className="flex items-end justify-between mb-4">
               <div>
                 <p className="text-xs text-gray-500 mb-1">
-                  {activeTier.qty} stickers ·{" "}
+                  {dealInfo.dealQty ?? activeTier.qty} stickers ·{" "}
                   {MATERIALS.find((m) => m.id === material)?.label} ·{" "}
-                  {sizeId === "custom"
+                  {dealInfo.dealSize
+                    ? (SIZES.find((s) => s.id === dealInfo.dealSize)?.sub ?? "")
+                    : sizeId === "custom"
                     ? `${customW || "?"}×${customH || "?"} in`
                     : sizeId.replace("x", "×") + '"'}
                 </p>

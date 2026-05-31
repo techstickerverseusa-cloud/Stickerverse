@@ -17,6 +17,8 @@ export interface ProofResult {
   shape: ShapeId;
   fitMode: FitMode;
   roundedCorners: RoundedCorners;
+  cutlineColor: string;
+  bgColor: string;
 }
 
 interface Props {
@@ -35,17 +37,6 @@ const RADIUS_MAP: Record<RoundedCorners, string> = {
   heavy: "60px",
 };
 
-function cutlineFilter(t: BorderThickness): string {
-  const d = BORDER_PX[t];
-  const d2 = Math.round(d * 0.7);
-  const c = "#00ff44";
-  return [
-    `drop-shadow(${d}px 0 0 ${c})`, `drop-shadow(-${d}px 0 0 ${c})`,
-    `drop-shadow(0 ${d}px 0 ${c})`, `drop-shadow(0 -${d}px 0 ${c})`,
-    `drop-shadow(${d2}px ${d2}px 0 ${c})`, `drop-shadow(-${d2}px -${d2}px 0 ${c})`,
-    `drop-shadow(${d2}px -${d2}px 0 ${c})`, `drop-shadow(-${d2}px ${d2}px 0 ${c})`,
-  ].join(" ");
-}
 
 function ShapeIcon({ id, size = 20 }: { id: ShapeId; size?: number }) {
   const sw = 1.5;
@@ -98,41 +89,45 @@ export default function PreflightModal({ file, initialShape, material, onApprove
   const [border, setBorder] = useState<BorderThickness>("normal");
   const [zoom, setZoom] = useState(1);
 
+  const [cutlineColor, setCutlineColor] = useState("#ffffff");
+  const [bgColor, setBgColor] = useState("#060614");
   const [isSaving, setIsSaving] = useState(false);
   const [showChangeForm, setShowChangeForm] = useState(false);
   const [noteText, setNoteText] = useState("");
 
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval>;
+    // Show image instantly from local file — no server round-trip needed
+    const objectUrl = URL.createObjectURL(file);
+    setProcessedUrl(objectUrl);
+    setOriginalUrl(objectUrl);
+    setProgress(100);
+    setUploadStatus("ready");
 
-    async function run() {
-      setUploadStatus("loading");
-      setProgress(5);
-      timer = setInterval(() => setProgress((p) => Math.min(p + 6, 88)), 300);
+    // In background: attempt background removal (non-blocking)
+    const controller = new AbortController();
+    const deadline = setTimeout(() => controller.abort(), 20_000);
 
+    (async () => {
       try {
         const fd = new FormData();
         fd.append("file", file);
-        const resp = await fetch("/api/upload", { method: "POST", body: fd });
-        clearInterval(timer);
-        if (!resp.ok) throw new Error("Upload failed");
-
-        const data = (await resp.json()) as {
-          processedUrl: string; originalUrl: string; removedBackground: boolean;
-        };
-        setProcessedUrl(data.processedUrl);
-        setOriginalUrl(data.originalUrl);
-        setRemovedBg(data.removedBackground);
-        setProgress(100);
-        setUploadStatus("ready");
+        const resp = await fetch("/api/upload", { method: "POST", body: fd, signal: controller.signal });
+        if (!resp.ok) return;
+        const data = await resp.json() as { processedUrl: string | null; removedBackground: boolean };
+        if (data.processedUrl) setProcessedUrl(data.processedUrl);
+        setRemovedBg(data.removedBackground ?? false);
       } catch {
-        clearInterval(timer);
-        setUploadStatus("error");
+        // timeout, network error, or no REMOVE_BG key — keep showing original, that's fine
+      } finally {
+        clearTimeout(deadline);
       }
-    }
+    })();
 
-    run();
-    return () => clearInterval(timer);
+    return () => {
+      controller.abort();
+      clearTimeout(deadline);
+      URL.revokeObjectURL(objectUrl);
+    };
   }, [file]);
 
   const isEdge = fitMode === "edge";
@@ -144,7 +139,7 @@ export default function PreflightModal({ file, initialShape, material, onApprove
   const SHAPE_LABELS: Record<ShapeId, string> = { "die-cut": "Die", circle: "Circle", oval: "Oval", square: "Square", rectangle: "Rect" };
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div className="fixed inset-0 z-200 bg-black/85 flex items-center justify-center p-3 sm:p-4">
       <div className="relative bg-[#0c0c14] border border-white/[0.09] w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col md:flex-row shadow-2xl">
 
         {/* Close */}
@@ -160,7 +155,7 @@ export default function PreflightModal({ file, initialShape, material, onApprove
         {/* ── Left: Canvas ── */}
         <div
           className="flex-1 min-h-[300px] md:min-h-[500px] flex items-center justify-center relative overflow-hidden"
-          style={{ background: "radial-gradient(ellipse 80% 70% at 50% 40%, rgba(0,40,20,0.28) 0%, #060614 100%)" }}
+          style={{ background: bgColor, transition: "background 0.3s ease" }}
         >
           {/* Grid */}
           <div
@@ -192,36 +187,23 @@ export default function PreflightModal({ file, initialShape, material, onApprove
             <span className="text-[9px] text-[#00ff44]/50 tracking-widest">{Math.round(zoom * 100)}%</span>
           </div>
 
-          {/* Loading */}
-          {uploadStatus === "loading" && (
-            <div className="flex flex-col items-center gap-5 z-10">
-              <div className="w-12 h-12 border-2 border-white/10 border-t-[#00ff44] rounded-full animate-spin" />
-              <div className="text-center">
-                <p className="text-[9px] tracking-[0.4em] uppercase text-gray-500 mb-3" style={{ fontFamily: "var(--font-orbitron)" }}>
-                  Generating Proof… {progress}%
-                </p>
-                <div className="w-40 h-1 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#00ff44] rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Error */}
-          {uploadStatus === "error" && (
-            <div className="z-10 text-center px-6">
-              <div className="w-10 h-10 border border-red-500/30 flex items-center justify-center mx-auto mb-3">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </div>
-              <p className="text-red-400 text-sm mb-3">Processing failed</p>
-              <button onClick={() => onClose()} className="text-xs text-gray-500 hover:text-white underline">Close</button>
-            </div>
-          )}
+          {/* SVG filter for cutline — feMorphology dilate is GPU-accelerated, far cheaper than 16 CSS drop-shadows */}
+          <svg style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }} aria-hidden="true">
+            <defs>
+              <filter id="cutline-outline" x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
+                <feMorphology in="SourceAlpha" operator="dilate" radius={BORDER_PX[border]} result="dilated" />
+                <feFlood floodColor={cutlineColor} result="color" />
+                <feComposite in="color" in2="dilated" operator="in" result="outline" />
+                <feMerge>
+                  <feMergeNode in="outline" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+          </svg>
 
           {/* Preview */}
-          {uploadStatus === "ready" && processedUrl && (
+          {processedUrl && (
             <div className="relative z-10 flex items-center justify-center p-10">
               <div
                 style={{
@@ -229,7 +211,7 @@ export default function PreflightModal({ file, initialShape, material, onApprove
                   height: `${h}px`,
                   ...clipStyle,
                   overflow: isEdge ? "visible" : "hidden",
-                  border: isEdge ? "none" : "2px dashed #00ff44",
+                  border: isEdge ? "none" : `2px dashed ${cutlineColor}`,
                   flexShrink: 0,
                   transition: "all 0.2s ease",
                 }}
@@ -238,13 +220,14 @@ export default function PreflightModal({ file, initialShape, material, onApprove
                 <img
                   src={processedUrl}
                   alt="Proof"
+                  decoding="async"
                   style={{
                     width: "100%",
                     height: "100%",
                     objectFit: isEdge ? "contain" : fitMode === "fill" ? "cover" : "contain",
                     display: "block",
                     transition: "filter 0.15s ease",
-                    ...(isEdge ? { filter: cutlineFilter(border) } : {}),
+                    ...(isEdge ? { filter: "url(#cutline-outline)", willChange: "filter" } : {}),
                   }}
                 />
               </div>
@@ -377,6 +360,67 @@ export default function PreflightModal({ file, initialShape, material, onApprove
               </div>
             )}
 
+            {/* Cutline Color — only in edge (die-cut) mode */}
+            {isEdge && (
+              <div>
+                <p className="text-[9px] tracking-[0.35em] uppercase text-gray-500 mb-2" style={{ fontFamily: "var(--font-orbitron)" }}>Cutline Color</p>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {["#ffffff", "#000000", "#ffff00", "#ff3333", "#33aaff", "#ff66ff", "#00ff99"].map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setCutlineColor(c)}
+                      title={c}
+                      className="w-7 h-7 rounded-full transition-all duration-200"
+                      style={{
+                        background: c,
+                        outline: cutlineColor === c ? "2px solid white" : "2px solid transparent",
+                        outlineOffset: "2px",
+                        transform: cutlineColor === c ? "scale(1.15)" : "scale(1)",
+                        border: c === "#ffffff" ? "1px solid rgba(255,255,255,0.3)" : "none",
+                      }}
+                    />
+                  ))}
+                  <label title="Custom color" className="relative w-7 h-7 rounded-full overflow-hidden cursor-pointer" style={{ background: "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)", outline: "2px solid transparent", outlineOffset: "2px" }}>
+                    <input type="color" value={cutlineColor} onChange={(e) => setCutlineColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Background Color */}
+            <div>
+              <p className="text-[9px] tracking-[0.35em] uppercase text-gray-500 mb-2" style={{ fontFamily: "var(--font-orbitron)" }}>Background</p>
+              <div className="flex flex-wrap gap-2 items-center">
+                {[
+                  { color: "#060614", label: "Dark" },
+                  { color: "#ffffff", label: "White" },
+                  { color: "#000000", label: "Black" },
+                  { color: "#1e2d4a", label: "Navy" },
+                  { color: "#c0392b", label: "Red" },
+                  { color: "#c0712b", label: "Orange" },
+                  { color: "#b8962e", label: "Gold" },
+                  { color: "#555555", label: "Gray" },
+                ].map(({ color, label }) => (
+                  <button
+                    key={color}
+                    onClick={() => setBgColor(color)}
+                    title={label}
+                    className="w-7 h-7 rounded-full transition-all duration-200"
+                    style={{
+                      background: color,
+                      outline: bgColor === color ? "2px solid white" : "2px solid transparent",
+                      outlineOffset: "2px",
+                      transform: bgColor === color ? "scale(1.15)" : "scale(1)",
+                      border: color === "#ffffff" ? "1px solid rgba(255,255,255,0.3)" : "none",
+                    }}
+                  />
+                ))}
+                <label title="Custom color" className="relative w-7 h-7 rounded-full overflow-hidden cursor-pointer" style={{ background: "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)" }}>
+                  <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                </label>
+              </div>
+            </div>
+
             {/* Background status */}
             {uploadStatus === "ready" && (
               <div className={`flex items-start gap-2.5 p-3 border ${removedBg ? "border-green-500/20 bg-green-500/[0.03]" : "border-yellow-500/20 bg-yellow-500/[0.02]"}`}>
@@ -446,7 +490,7 @@ export default function PreflightModal({ file, initialShape, material, onApprove
                         // non-fatal — approve without shopifyUrl
                       }
                       setIsSaving(false);
-                      onApprove({ processedUrl, originalUrl, shopifyUrl, designUrl, borderThickness: border, removedBackground: removedBg, shape, fitMode, roundedCorners });
+                      onApprove({ processedUrl, originalUrl, shopifyUrl, designUrl, borderThickness: border, removedBackground: removedBg, shape, fitMode, roundedCorners, cutlineColor, bgColor });
                     }}
                     disabled={uploadStatus !== "ready" || isSaving}
                     className="w-full py-3.5 text-sm font-bold tracking-[0.15em] uppercase bg-[#22c55e] text-black hover:bg-[#16a34a] active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"

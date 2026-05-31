@@ -10,8 +10,26 @@ const FEATURES = [
   { num: '04', title: 'Infinite Designs', desc: 'A constantly expanding multiverse of community-driven artwork and limited-edition drops.', icon: 'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z' },
 ];
 
+const COLLECTION_ORDER = [
+  "custom vinyl stickers",
+  "custom banners",
+  "laser lab",
+];
+
+function sortCollections<T extends { title: string }>(list: T[]): T[] {
+  return [...list].sort((a, b) => {
+    const ai = COLLECTION_ORDER.findIndex((n) => a.title.toLowerCase().includes(n));
+    const bi = COLLECTION_ORDER.findIndex((n) => b.title.toLowerCase().includes(n));
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+}
+
 export default async function HomePage() {
-  const collections = await getAllCollections();
+  const rawCollections = await getAllCollections();
+  const collections = sortCollections(rawCollections);
 
   return (
     <AnimatedClientWrapper>
@@ -142,8 +160,7 @@ export default async function HomePage() {
 
             {/* Sub-headline Description */}
             <p className="text-zinc-400 text-base md:text-lg max-w-xl mb-10 leading-relaxed font-normal">
-              Premium custom stickers, banners, magnets &amp; laser engraving — 
-              crafted to last, designed to impress.
+              Precision, Quality, American
             </p>
 
             {/* Call To Actions */}
@@ -170,7 +187,7 @@ export default async function HomePage() {
                 { value: "10K+", label: "Orders Shipped" },
                 { value: "48hr", label: "Turnaround"     },
                 { value: "100%", label: "Satisfaction"   },
-                { value: "4.9★", label: "Avg. Rating"    },
+                { value: "5.0★", label: "Avg. Rating"    },
               ].map((stat) => (
                 <div key={stat.label} className="text-center group cursor-default">
                   <p
