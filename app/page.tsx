@@ -218,7 +218,7 @@ export default async function HomePage() {
         {/* ══════════════════════════════════════════
             CATEGORIES SECTION
            ══════════════════════════════════════════ */}
-        <section id="categories" className="px-4 sm:px-6 lg:px-8 py-28 max-w-[1400px] mx-auto scroll-mt-10">
+        <section id="categories" className="px-4 sm:px-6 lg:px-8 py-28 max-w-5xl mx-auto scroll-mt-10">
           <div className="text-center mb-16 space-y-3">
             <p
               className="text-[10px] tracking-[0.45em] uppercase text-indigo-400 font-semibold"
@@ -245,28 +245,28 @@ export default async function HomePage() {
           {collections.length === 0 ? (
             <p className="text-zinc-500 text-center py-20 font-medium">No categories found at the moment.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex flex-col gap-5">
               {collections.map((col, idx) => (
                 <Link
                   key={col.id}
                   href={`/collections/${col.handle}`}
-                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015] hover:border-indigo-500/25 transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_24px_48px_rgba(80,60,200,0.10)] animate-fade-up"
-                  style={{ animationDelay: `${idx * 80}ms`, animationFillMode: "both" }}
+                  className="group relative flex flex-col sm:flex-row overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015] hover:border-indigo-500/30 transition-all duration-500 hover:shadow-[0_8px_64px_rgba(80,60,200,0.14)] animate-fade-up"
+                  style={{ animationDelay: `${idx * 130}ms`, animationFillMode: "both", minHeight: "240px" }}
                 >
-                  {/* Image */}
-                  <div className="relative aspect-video overflow-hidden">
+                  {/* ── Left: Image Panel ── */}
+                  <div className="relative h-56 sm:h-auto sm:w-[42%] shrink-0 overflow-hidden">
                     {col.image ? (
                       <Image
                         src={col.image.url}
                         alt={col.image.altText ?? col.title}
                         fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out grayscale-[15%] group-hover:grayscale-0"
+                        sizes="(max-width: 640px) 100vw, 42vw"
+                        className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out group-hover:brightness-105"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-indigo-950/40 to-zinc-900">
+                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/60 to-zinc-900 flex items-center justify-center">
                         <span
-                          className="text-9xl font-black text-white/[0.03] select-none"
+                          className="text-[9rem] font-black text-white/[0.025] select-none"
                           style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
                         >
                           {col.title.charAt(0)}
@@ -274,73 +274,87 @@ export default async function HomePage() {
                       </div>
                     )}
 
-                    {/* Gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#060608] via-[#060608]/20 to-transparent" />
+                    {/* Right-edge blend into content (desktop) */}
+                    <div className="absolute inset-y-0 right-0 w-28 bg-gradient-to-r from-transparent to-[#060608] hidden sm:block" />
+                    {/* Bottom-edge blend (mobile) */}
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#060608] to-transparent sm:hidden" />
 
                     {/* Number badge */}
                     <div
-                      className="absolute top-3 left-3.5 text-[9px] font-bold text-white/25 tracking-[0.25em]"
+                      className="absolute top-4 left-4 text-[10px] font-bold text-white/20 tracking-[0.3em]"
                       style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
                     >
                       {String(idx + 1).padStart(2, "0")}
                     </div>
 
-                    {/* Browse overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="border border-white/25 px-5 py-2 backdrop-blur-sm translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                        <span
-                          className="text-[9px] tracking-[0.4em] uppercase text-white"
-                          style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
-                        >
-                          Browse Collection
-                        </span>
-                      </div>
-                    </div>
+                    {/* Shimmer scan line on hover */}
+                    <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 ease-in-out pointer-events-none"
+                      style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%)" }} />
                   </div>
 
-                  {/* Content */}
-                  <div className="p-5 flex flex-col gap-3 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <h3
-                        className="text-xs font-bold tracking-[0.12em] uppercase text-zinc-200 group-hover:text-white transition-colors duration-300 leading-relaxed"
-                        style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
-                      >
-                        {col.title}
-                      </h3>
-                      <div className="flex-shrink-0 w-7 h-7 rounded border border-white/[0.08] flex items-center justify-center text-zinc-600 group-hover:border-indigo-400/35 group-hover:text-indigo-400 group-hover:bg-indigo-500/[0.05] transition-all duration-300 mt-0.5">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                          className="group-hover:translate-x-0.5 transition-transform duration-200">
-                          <path d="m5 12 14 0M13 6l6 6-6 6" />
-                        </svg>
-                      </div>
-                    </div>
+                  {/* ── Right: Content Panel ── */}
+                  <div className="relative flex flex-col justify-center px-8 py-8 sm:py-10 sm:px-12 flex-1 gap-5 overflow-hidden">
 
-                    {col.description ? (
-                      <p className="text-zinc-500 text-xs leading-relaxed line-clamp-3 group-hover:text-zinc-300 transition-colors duration-300">
-                        {col.description}
-                      </p>
-                    ) : (
-                      <p className="text-zinc-600 text-xs leading-relaxed italic">
-                        Explore our curated collection of premium stickers and custom prints.
-                      </p>
-                    )}
+                    {/* Ambient glow on hover */}
+                    <div
+                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+                      style={{ background: "radial-gradient(500px circle at 20% 55%, rgba(99,102,241,0.08), transparent 70%)" }}
+                    />
 
-                    {/* Animated bottom accent */}
-                    <div className="mt-auto pt-3 flex items-center gap-2 border-t border-white/[0.04]">
-                      <div className="h-px flex-1 bg-white/[0.04] relative overflow-hidden">
-                        <div className="absolute inset-y-0 left-0 w-0 group-hover:w-full bg-gradient-to-r from-indigo-500/50 to-transparent transition-all duration-500 ease-out" />
-                      </div>
+                    {/* Label */}
+                    <p
+                      className="text-[9px] tracking-[0.5em] uppercase text-indigo-400 font-semibold relative z-10"
+                      style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
+                    >
+                      Collection · {String(idx + 1).padStart(2, "0")}
+                    </p>
+
+                    {/* Title */}
+                    <h3
+                      className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-zinc-200 group-hover:text-white transition-colors duration-300 relative z-10 leading-tight"
+                      style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
+                    >
+                      {col.title}
+                    </h3>
+
+                    {/* Description */}
+                    <p className="text-zinc-500 text-sm leading-7 max-w-md group-hover:text-zinc-300 transition-colors duration-500 relative z-10 font-normal">
+                      {col.description
+                        ? col.description
+                        : "Explore our curated collection of premium stickers and custom prints."}
+                    </p>
+
+                    {/* CTA row */}
+                    <div className="flex items-center gap-3 relative z-10">
+                      <div className="h-px w-6 bg-white/[0.08] group-hover:w-14 group-hover:bg-indigo-500/50 transition-all duration-500 ease-out" />
                       <span
-                        className="text-[9px] tracking-[0.3em] uppercase text-zinc-600 group-hover:text-indigo-400 transition-colors duration-300"
+                        className="text-[9px] tracking-[0.42em] uppercase font-bold text-zinc-600 group-hover:text-indigo-400 transition-colors duration-300"
                         style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
                       >
-                        Explore
+                        Browse Collection
                       </span>
+                      <svg
+                        width="13" height="13" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2.5"
+                        className="text-zinc-600 group-hover:text-indigo-400 group-hover:translate-x-1.5 transition-all duration-300"
+                      >
+                        <path d="m5 12 14 0M13 6l6 6-6 6" />
+                      </svg>
                     </div>
                   </div>
 
-                  {/* Top gradient accent */}
-                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/0 to-transparent group-hover:via-indigo-400/45 transition-all duration-700" />
+                  {/* Bottom animated gradient bar */}
+                  <div className="absolute bottom-0 inset-x-0 h-[2px] overflow-hidden">
+                    <div className="h-full w-0 group-hover:w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-700 ease-out" />
+                  </div>
+
+                  {/* Top highlight */}
+                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/0 to-transparent group-hover:via-indigo-400/50 transition-all duration-700" />
+
+                  {/* Left accent bar */}
+                  <div className="absolute left-0 inset-y-0 w-[2px] overflow-hidden">
+                    <div className="w-full h-0 group-hover:h-full bg-gradient-to-b from-indigo-500/80 via-purple-500/60 to-transparent transition-all duration-600 ease-out" />
+                  </div>
                 </Link>
               ))}
             </div>

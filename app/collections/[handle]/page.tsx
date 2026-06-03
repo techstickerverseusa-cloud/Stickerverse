@@ -63,26 +63,23 @@ export default async function CollectionPage({ params }: Props) {
       />
 
       {/* ── Trust Badges ── */}
-      <section className="px-6 pb-10">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <section className="px-6 pb-12">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             {
               icon: (
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25" />
-                  <line x1="8" y1="16" x2="8.01" y2="16" />
-                  <line x1="8" y1="20" x2="8.01" y2="20" />
-                  <line x1="12" y1="18" x2="12.01" y2="18" />
-                  <line x1="12" y1="22" x2="12.01" y2="22" />
-                  <line x1="16" y1="16" x2="16.01" y2="16" />
-                  <line x1="16" y1="20" x2="16.01" y2="20" />
+                  <line x1="8" y1="16" x2="8.01" y2="16" /><line x1="8" y1="20" x2="8.01" y2="20" />
+                  <line x1="12" y1="18" x2="12.01" y2="18" /><line x1="12" y1="22" x2="12.01" y2="22" />
+                  <line x1="16" y1="16" x2="16.01" y2="16" /><line x1="16" y1="20" x2="16.01" y2="20" />
                 </svg>
               ),
               label: "Waterproof & Extreme-Weather Tested",
             },
             {
               icon: (
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
                   <line x1="2" y1="12" x2="22" y2="12" />
                   <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
@@ -92,7 +89,7 @@ export default async function CollectionPage({ params }: Props) {
             },
             {
               icon: (
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="3" width="18" height="18" rx="2" />
                   <circle cx="8.5" cy="8.5" r="1.5" />
                   <polyline points="21 15 16 10 5 21" />
@@ -101,20 +98,23 @@ export default async function CollectionPage({ params }: Props) {
               label: "Free Online Proof With All Orders",
             },
           ].map(({ icon, label }) => (
-            <div key={label} className="flex items-center gap-4 border border-white/[0.07] bg-white/[0.02] px-5 py-4">
-              <div className="text-indigo-400 flex-shrink-0">{icon}</div>
-              <p className="text-xs text-gray-300 font-medium leading-snug">{label}</p>
+            <div
+              key={label}
+              className="group flex items-center gap-4 border border-white/6 bg-white/1.5 hover:border-indigo-500/25 hover:bg-white/3 px-5 py-4 rounded-xl transition-all duration-300"
+            >
+              <div className="text-indigo-400 flex-shrink-0 group-hover:text-indigo-300 transition-colors duration-300">{icon}</div>
+              <p className="text-[11px] text-zinc-400 font-medium leading-snug group-hover:text-zinc-200 transition-colors duration-300">{label}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── Products Grid ── */}
-      <section className="px-6 pb-16">
+      <section className="px-6 pb-20">
         {collection.products.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-5 max-w-5xl mx-auto">
             {collection.products.map((product, idx) => {
               const price    = product.minPrice ?? null;
               const currency = product.currencyCode ?? "USD";
@@ -123,63 +123,105 @@ export default async function CollectionPage({ params }: Props) {
                 <Link
                   key={product.id}
                   href={`/products/${product.handle}`}
-                  className="group flex flex-col border border-white/[0.07] hover:border-white/[0.22] bg-white/[0.015] hover:bg-white/[0.035] overflow-hidden transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_rgba(0,0,0,0.55)] animate-fade-up"
-                  style={{ animationDelay: `${idx * 55}ms`, animationFillMode: "both" }}
+                  className="group relative overflow-hidden rounded-2xl border border-white/6 bg-zinc-950 animate-fade-up hover:border-white/14 transition-all duration-500 hover:shadow-[0_24px_64px_rgba(0,0,0,0.65),0_0_40px_rgba(80,60,200,0.08)]"
+                  style={{ animationDelay: `${idx * 65}ms`, animationFillMode: "both" }}
                 >
-                  <div className="relative aspect-square overflow-hidden bg-white/[0.02]">
+                  {/* Portrait image — 3:4 ratio */}
+                  <div className="relative aspect-3/4 overflow-hidden">
                     {product.featuredImage ? (
                       <Image
                         src={product.featuredImage.url}
                         alt={product.featuredImage.altText ?? product.title}
                         fill
-                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                        sizes="(max-width: 768px) 50vw, 33vw"
                         className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-5xl font-bold text-white/[0.05]" style={{ fontFamily: "var(--font-orbitron)" }}>
+                      <div className="absolute inset-0 bg-linear-to-br from-indigo-950/50 to-zinc-900 flex items-center justify-center">
+                        <span
+                          className="text-7xl font-black text-white/2.5 select-none"
+                          style={{ fontFamily: "var(--font-orbitron)" }}
+                        >
                           {product.title.charAt(0)}
                         </span>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#060608]/80 via-[#060608]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
-                    <div className="absolute bottom-0 inset-x-0 px-4 py-3 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-400 flex items-center gap-2">
-                      <span className="text-[8px] tracking-[0.35em] uppercase text-white" style={{ fontFamily: "var(--font-orbitron)" }}>
-                        View Product
-                      </span>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-                        <path d="m5 12 14 0M13 6l6 6-6 6" />
-                      </svg>
-                    </div>
-                    <div className="absolute top-3 right-3 w-5 h-5 border-t border-r border-white/[0.08] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <div className="absolute bottom-3 left-3 w-5 h-5 border-b border-l border-white/[0.08] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </div>
 
-                  <div className="p-4 flex flex-col gap-3 flex-1">
-                    <h3
-                      className="text-[10px] md:text-[11px] font-bold tracking-[0.1em] uppercase text-gray-400 group-hover:text-white transition-colors duration-300 line-clamp-2 leading-relaxed"
+                    {/* Persistent bottom gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent" />
+
+                    {/* Hover: deeper overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/98 via-zinc-950/60 to-zinc-950/10 opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+
+                    {/* Index badge */}
+                    <div
+                      className="absolute top-3.5 left-3.5 text-[10px] font-bold text-white/18 tracking-[0.3em]"
                       style={{ fontFamily: "var(--font-orbitron)" }}
                     >
-                      {product.title}
-                    </h3>
-                    <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/[0.05]">
-                      {price ? (
-                        <div>
-                          <p className="text-[8px] text-gray-600 tracking-[0.3em] uppercase mb-0.5" style={{ fontFamily: "var(--font-orbitron)" }}>From</p>
-                          <p className="text-sm font-bold text-white" style={{ fontFamily: "var(--font-orbitron)" }}>
-                            {new Intl.NumberFormat("en-US", { style: "currency", currency }).format(Number(price))}
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-600">Price varies</p>
-                      )}
-                      <div className="w-8 h-8 border border-white/[0.07] flex items-center justify-center text-gray-600 group-hover:border-white/[0.28] group-hover:text-white group-hover:bg-white/[0.06] transition-all duration-300 flex-shrink-0">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                          className="group-hover:translate-x-0.5 transition-transform duration-200">
-                          <path d="m5 12 14 0M13 6l6 6-6 6" />
-                        </svg>
+                      {String(idx + 1).padStart(2, "0")}
+                    </div>
+
+                    {/* Shimmer scan line on hover */}
+                    <div
+                      className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 ease-in-out pointer-events-none"
+                      style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.045) 50%, transparent 100%)" }}
+                    />
+
+                    {/* Center "View Product" — slides up on hover */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="border border-white/25 px-5 py-2.5 backdrop-blur-sm translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-400">
+                        <span
+                          className="text-[8px] tracking-[0.45em] uppercase text-white"
+                          style={{ fontFamily: "var(--font-orbitron)" }}
+                        >
+                          View Product
+                        </span>
                       </div>
                     </div>
+
+                    {/* Corner decorators — appear on hover */}
+                    <div className="absolute top-3 right-3 w-5 h-5 border-t-[1.5px] border-r-[1.5px] border-transparent group-hover:border-white/30 transition-all duration-500" />
+                    <div className="absolute top-3 left-3 w-5 h-5 border-t-[1.5px] border-l-[1.5px] border-transparent group-hover:border-white/30 transition-all duration-500" />
+
+                    {/* Floating content at bottom */}
+                    <div className="absolute bottom-0 inset-x-0 p-4 flex flex-col gap-2">
+                      <h3
+                        className="text-[10px] sm:text-[11px] font-bold tracking-[0.08em] uppercase text-zinc-300 group-hover:text-white transition-colors duration-300 line-clamp-2 leading-snug"
+                        style={{ fontFamily: "var(--font-orbitron)" }}
+                      >
+                        {product.title}
+                      </h3>
+                      <div className="flex items-center justify-between gap-2">
+                        {price ? (
+                          <div>
+                            <p className="text-[7px] text-zinc-500 tracking-[0.3em] uppercase mb-0.5" style={{ fontFamily: "var(--font-orbitron)" }}>
+                              From
+                            </p>
+                            <p className="text-sm font-bold text-white" style={{ fontFamily: "var(--font-orbitron)" }}>
+                              {new Intl.NumberFormat("en-US", { style: "currency", currency }).format(Number(price))}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-zinc-600 italic">Price varies</p>
+                        )}
+                        <div className="w-7 h-7 rounded-md border border-white/8 flex items-center justify-center text-zinc-500 group-hover:border-indigo-400/40 group-hover:text-indigo-400 group-hover:bg-indigo-500/8 transition-all duration-300 shrink-0">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                            className="group-hover:translate-x-0.5 transition-transform duration-200">
+                            <path d="m5 12 14 0M13 6l6 6-6 6" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom gradient accent bar */}
+                  <div className="absolute bottom-0 inset-x-0 h-0.5 overflow-hidden">
+                    <div className="h-full w-0 group-hover:w-full bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-700 ease-out" />
+                  </div>
+
+                  {/* Left accent bar */}
+                  <div className="absolute left-0 inset-y-0 w-0.5 overflow-hidden">
+                    <div className="w-full h-0 group-hover:h-full bg-linear-to-b from-indigo-500/70 via-purple-500/50 to-transparent transition-all duration-600 ease-out" />
                   </div>
                 </Link>
               );
