@@ -13,7 +13,7 @@ export type StickerType = "vinyl" | "holographic" | "glitter" | "chrome" | "shee
 type CutType    = "die-cut" | "kiss-cut";
 type ShapeId    = "custom" | "circle" | "oval" | "square" | "rectangle";
 type MaterialId = "matte" | "gloss" | "holographic" | "chrome" | "glitter";
-type SizeId     = "2x2" | "3x3" | "4x4" | "5x5" | "custom";
+type SizeId     = "2x2" | "3x3" | "4x4" | "5x5" | "4x2" | "6x4" | "7x5" | "11x8.5" | "custom";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -61,15 +61,49 @@ const TYPE_CONFIG: Record<StickerType, {
 
 // ─── Pricing ──────────────────────────────────────────────────────────────────
 
-const QTY_TIERS = [
-  { qty: 50,   discount: 0  },
-  { qty: 100,  discount: 22 },
-  { qty: 200,  discount: 35 },
-  { qty: 300,  discount: 45 },
-  { qty: 500,  discount: 55 },
-  { qty: 1000, discount: 65 },
-  { qty: 3000, discount: 75 },
-] as const;
+const BASE_QTYS = [50, 100, 200, 300, 500, 1000, 3000] as const;
+
+// [perUnit, total, savings%]
+const PRICING: Record<StickerType, Partial<Record<string, readonly [number, number, number][]>>> = {
+  vinyl: {
+    "2x2":[[1.17,58.50,0],[0.76,76.05,35],[0.54,107.64,54],[0.46,136.89,61],[0.37,187.50,68],[0.30,304.20,74],[0.20,596.70,83]],
+    "3x3":[[1.35,67.50,0],[0.88,87.75,35],[0.62,124.20,54],[0.53,157.95,61],[0.43,216.00,68],[0.35,351.00,74],[0.23,688.50,83]],
+    "4x4":[[1.62,81.00,0],[1.13,113.40,30],[0.86,171.72,47],[0.75,223.54,54],[0.63,315.90,61],[0.53,534.60,67],[0.37,1117.80,77]],
+    "5x5":[[1.91,95.00,0],[1.43,143.25,25],[1.15,229.20,40],[1.01,303.69,47],[0.90,448.85,53],[0.76,764.00,60],[0.59,1776.30,69]],
+  },
+  holographic: {
+    "2x2":[[1.48,74.00,0],[0.96,96.20,35],[0.68,136.16,54],[0.58,173.17,61],[0.47,236.81,68],[0.38,384.81,74],[0.25,754.83,83]],
+    "3x3":[[1.71,85.39,0],[1.11,111.00,35],[0.79,157.11,54],[0.67,199.81,61],[0.55,273.24,68],[0.44,444.02,74],[0.29,870.95,83]],
+    "4x4":[[2.05,102.46,0],[1.43,143.45,30],[1.09,217.23,47],[0.94,282.80,54],[0.80,399.61,61],[0.68,676.27,67],[0.47,1414.02,77]],
+    "5x5":[[2.42,120.81,0],[1.81,181.21,25],[1.45,289.94,40],[1.28,384.17,47],[1.14,567.80,53],[0.97,966.46,60],[0.75,2247.02,69]],
+  },
+  chrome: {
+    "2x2":[[1.48,74.00,0],[0.96,96.20,35],[0.68,136.16,54],[0.58,173.17,61],[0.47,236.81,68],[0.38,384.81,74],[0.25,754.83,83]],
+    "3x3":[[1.71,85.39,0],[1.11,111.00,35],[0.79,157.11,54],[0.67,199.81,61],[0.55,273.24,68],[0.44,444.02,74],[0.29,870.95,83]],
+    "4x4":[[2.05,102.46,0],[1.43,143.45,30],[1.09,217.23,47],[0.94,282.80,54],[0.80,399.61,61],[0.68,676.27,67],[0.47,1414.02,77]],
+    "5x5":[[2.42,120.81,0],[1.81,181.21,25],[1.45,289.94,40],[1.28,384.17,47],[1.14,567.80,53],[0.97,966.46,60],[0.75,2247.02,69]],
+  },
+  glitter: {
+    "2x2":[[1.35,67.27,0],[0.87,87.46,35],[0.62,123.79,54],[0.52,157.42,61],[0.43,215.28,68],[0.35,349.83,74],[0.23,686.21,83]],
+    "3x3":[[1.55,77.43,0],[1.01,100.91,35],[0.71,142.83,54],[0.61,181.64,61],[0.50,248.40,68],[0.40,403.65,74],[0.26,791.78,83]],
+    "4x4":[[1.86,93.15,0],[1.30,130.41,30],[0.99,197.48,47],[0.86,257.09,54],[0.73,362.29,61],[0.61,614.79,67],[0.43,1285.47,77]],
+    "5x5":[[1.86,93.15,0],[1.30,130.41,30],[0.99,197.48,47],[0.86,257.09,54],[0.73,362.29,61],[0.61,614.79,67],[0.43,1285.47,77]],
+  },
+  sheets: {
+    "4x2":   [[1.33,66.50,0],[0.86,86.45,35],[0.61,122.36,54],[0.52,155.61,61],[0.43,212.80,68],[0.35,345.80,74],[0.23,678.30,83]],
+    "6x4":   [[1.87,93.50,0],[1.40,140.25,25],[1.12,224.40,40],[0.99,297.33,47],[0.88,439.45,53],[0.75,748.00,60],[0.58,1739.10,69]],
+    "7x5":   [[2.22,111.00,0],[1.67,166.50,25],[1.33,266.40,40],[1.18,352.98,47],[1.04,521.70,53],[0.89,888.00,60],[0.69,2064.60,69]],
+    "11x8.5":[[3.78,189.00,0],[3.10,309.96,18],[2.65,529.20,30],[2.42,725.76,36],[2.15,1077.30,43],[1.89,1890.00,50],[1.78,5329.80,53]],
+  },
+};
+
+const TYPE_HERO_IMG: Record<StickerType, string> = {
+  vinyl:       "/Vinyl Stickers.png",
+  holographic: "/Holographic Stickers.png",
+  glitter:     "/Glitter Stickers.png",
+  chrome:      "/Chrome Stickers.png",
+  sheets:      "/Sticker Sheets.png",
+};
 
 // ─── Option data ──────────────────────────────────────────────────────────────
 
@@ -97,10 +131,11 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
   const [cutType, setCutType]           = useState<CutType>("die-cut");
   const [shape, setShape]               = useState<ShapeId>("custom");
   const [material, setMaterial]         = useState<MaterialId>(config.defaultMaterial);
-  const [sizeId, setSizeId]             = useState<SizeId>("3x3");
+  const [sizeId, setSizeId]             = useState<SizeId>(stickerType === "sheets" ? "4x2" : "3x3");
   const [customW, setCustomW]           = useState("");
   const [customH, setCustomH]           = useState("");
-  const [selectedQty, setSelectedQty]   = useState(100);
+  const [selectedTierQty, setSelectedTierQty] = useState<number | "custom">(100);
+  const [customQtyInput, setCustomQtyInput]   = useState("");
   const [file, setFile]                 = useState<File | null>(null);
   const [filePreview, setFilePreview]   = useState<string | null>(null);
   const [dragging, setDragging]         = useState(false);
@@ -112,13 +147,24 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
   const { addItem } = useCart();
   const router = useRouter();
 
-  function tierCalc(qty: number, discount: number) {
-    const perUnit = Math.round(config.basePrice * (1 - discount / 100) * 100) / 100;
-    return { perUnit, total: Math.round(perUnit * qty * 100) / 100 };
+  const activeQty = selectedTierQty === "custom"
+    ? (parseInt(customQtyInput) || 0)
+    : selectedTierQty;
+
+  function getPrice(qty: number): { perUnit: number; total: number; savings: number } {
+    if (sizeId === "custom" || qty <= 0) return { perUnit: 0, total: 0, savings: 0 };
+    const tiers = PRICING[stickerType]?.[sizeId];
+    if (!tiers) return { perUnit: 0, total: 0, savings: 0 };
+    let idx = 0;
+    for (let i = 0; i < BASE_QTYS.length; i++) {
+      if (BASE_QTYS[i] <= qty) idx = i; else break;
+    }
+    const [perUnit, exactTotal, savings] = tiers[idx];
+    const total = BASE_QTYS[idx] === qty ? exactTotal : Math.round(perUnit * qty * 100) / 100;
+    return { perUnit, total, savings };
   }
 
-  const activeTier = QTY_TIERS.find((t) => t.qty === selectedQty) ?? QTY_TIERS[0];
-  const { perUnit: activePerUnit, total: activeTotal } = tierCalc(activeTier.qty, activeTier.discount);
+  const { perUnit: activePerUnit, total: activeTotal, savings: activeDiscount } = getPrice(activeQty);
 
   function handleFile(f: File) {
     setFile(f);
@@ -141,13 +187,13 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
       kind: "vinyl-sticker",
       cutType,
       title: config.title,
-      subtitle: `${materialLabel} · ${cutType} · ${sizeLabel} · Qty ${activeTier.qty}`,
-      thumbnail: "", unitLabel: "stickers", totalPrice: activeTotal, quantity: activeTier.qty,
+      subtitle: `${materialLabel} · ${cutType} · ${sizeLabel} · Qty ${activeQty}`,
+      thumbnail: "", unitLabel: "stickers", totalPrice: activeTotal, quantity: activeQty,
       shape, material,
       size: sizeId === "custom" ? "custom" : sizeId,
       customWidth:  sizeId === "custom" && customW ? Number(customW) : undefined,
       customHeight: sizeId === "custom" && customH ? Number(customH) : undefined,
-      roundedCorners: null, tierQty: activeTier.qty, perUnit: activePerUnit,
+      roundedCorners: null, tierQty: activeQty, perUnit: activePerUnit,
       fileName: file?.name,
       fileUrl: proofResult?.designUrl ?? proofResult?.shopifyUrl ?? undefined,
       instructions: instructions || undefined,
@@ -172,7 +218,8 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
     router.push("/cart");
   }
 
-  const canProceed = sizeId !== "custom" || (customW !== "" && customH !== "");
+  const canProceed = (sizeId !== "custom" || (customW !== "" && customH !== ""))
+    && (selectedTierQty !== "custom" || (customQtyInput !== "" && parseInt(customQtyInput) >= 1));
 
   const shapeToPreflightId: Record<ShapeId, PreflightShapeId> = {
     custom: "die-cut", circle: "circle", oval: "oval", square: "square", rectangle: "rectangle",
@@ -330,21 +377,21 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
                 </div>
               </div>
 
-              {/* Floating material swatch */}
-              <div className="hidden md:flex flex-col items-center gap-3 shrink-0">
+              {/* Hero product image */}
+              <div className="hidden md:flex flex-col items-center gap-3 shrink-0" style={{ animation: "sc-float 4s ease-in-out infinite" }}>
                 <div style={{
-                  width: "88px", height: "88px", borderRadius: "50%",
-                  ...activeMaterialStyle,
-                  border: `2px solid rgba(${accentRgb},0.45)`,
-                  boxShadow: `0 0 32px rgba(${accentRgb},0.45),0 0 72px rgba(${accentRgb},0.18)`,
-                  animation: "sc-float 4s ease-in-out infinite",
-                }} />
-                <p style={{
-                  fontSize: "8px", fontFamily: "var(--font-orbitron)", letterSpacing: "0.35em",
-                  textTransform: "uppercase", color: `rgba(${accentRgb},0.6)`,
+                  width: "130px", height: "130px", borderRadius: "20px", overflow: "hidden", position: "relative",
+                  border: `1px solid rgba(${accentRgb},0.3)`,
+                  boxShadow: `0 0 32px rgba(${accentRgb},0.35),0 0 72px rgba(${accentRgb},0.12)`,
                 }}>
-                  {ALL_MATERIALS.find((m) => m.id === material)?.label}
-                </p>
+                  <Image
+                    src={TYPE_HERO_IMG[stickerType]}
+                    alt={config.title}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -442,28 +489,50 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                 {([
                   { id: "circle" as ShapeId, label: "Circle",
-                    icon: <svg viewBox="0 0 40 40" style={{ width: "30px", height: "30px" }} fill="none" stroke="currentColor" strokeWidth="2"><circle cx="20" cy="20" r="15"/></svg> },
+                    icon: (sel: boolean) => (
+                      <svg viewBox="0 0 56 56" style={{ width: "48px", height: "48px" }}>
+                        <circle cx="28" cy="28" r="22" fill={sel ? `rgba(${accentRgb},0.2)` : "rgba(255,255,255,0.04)"} stroke={sel ? accent : "rgba(255,255,255,0.22)"} strokeWidth="2"/>
+                        <circle cx="28" cy="28" r="15" fill="none" stroke={sel ? `rgba(${accentRgb},0.4)` : "rgba(255,255,255,0.08)"} strokeWidth="1" strokeDasharray="3 3"/>
+                      </svg>
+                    )},
                   { id: "oval" as ShapeId, label: "Oval",
-                    icon: <svg viewBox="0 0 40 40" style={{ width: "30px", height: "30px" }} fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="20" cy="20" rx="11" ry="16"/></svg> },
+                    icon: (sel: boolean) => (
+                      <svg viewBox="0 0 56 56" style={{ width: "48px", height: "48px" }}>
+                        <ellipse cx="28" cy="28" rx="16" ry="22" fill={sel ? `rgba(${accentRgb},0.2)` : "rgba(255,255,255,0.04)"} stroke={sel ? accent : "rgba(255,255,255,0.22)"} strokeWidth="2"/>
+                        <ellipse cx="28" cy="28" rx="10" ry="15" fill="none" stroke={sel ? `rgba(${accentRgb},0.4)` : "rgba(255,255,255,0.08)"} strokeWidth="1" strokeDasharray="3 3"/>
+                      </svg>
+                    )},
                   { id: "square" as ShapeId, label: "Square",
-                    icon: <svg viewBox="0 0 40 40" style={{ width: "30px", height: "30px" }} fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="5" width="30" height="30" rx="2"/></svg> },
+                    icon: (sel: boolean) => (
+                      <svg viewBox="0 0 56 56" style={{ width: "48px", height: "48px" }}>
+                        <rect x="6" y="6" width="44" height="44" rx="4" fill={sel ? `rgba(${accentRgb},0.2)` : "rgba(255,255,255,0.04)"} stroke={sel ? accent : "rgba(255,255,255,0.22)"} strokeWidth="2"/>
+                        <rect x="14" y="14" width="28" height="28" rx="2" fill="none" stroke={sel ? `rgba(${accentRgb},0.4)` : "rgba(255,255,255,0.08)"} strokeWidth="1" strokeDasharray="3 3"/>
+                      </svg>
+                    )},
                   { id: "rectangle" as ShapeId, label: "Rectangle",
-                    icon: <svg viewBox="0 0 40 40" style={{ width: "30px", height: "30px" }} fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="10" width="34" height="20" rx="2"/></svg> },
-                ]).map((s) => (
-                  <button key={s.id} className="sc-opt" onClick={() => setShape(s.id)} style={{
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: "6px",
-                    padding: "12px 8px", borderRadius: "12px", cursor: "pointer",
-                    border: `1px solid ${shape === s.id ? `rgba(${accentRgb},0.55)` : "rgba(255,255,255,0.07)"}`,
-                    background: shape === s.id ? `rgba(${accentRgb},0.1)` : "rgba(255,255,255,0.03)",
-                    boxShadow: shape === s.id ? `0 0 16px rgba(${accentRgb},0.2)` : "none",
-                    color: shape === s.id ? accent : "#4b5563",
-                  }}>
-                    {s.icon}
-                    <span style={{ fontSize: "9px", fontWeight: 600, fontFamily: "var(--font-orbitron)", letterSpacing: "0.08em", color: shape === s.id ? accent : "rgba(255,255,255,0.38)" }}>
-                      {s.label}
-                    </span>
-                  </button>
-                ))}
+                    icon: (sel: boolean) => (
+                      <svg viewBox="0 0 56 56" style={{ width: "48px", height: "48px" }}>
+                        <rect x="4" y="13" width="48" height="30" rx="4" fill={sel ? `rgba(${accentRgb},0.2)` : "rgba(255,255,255,0.04)"} stroke={sel ? accent : "rgba(255,255,255,0.22)"} strokeWidth="2"/>
+                        <rect x="11" y="20" width="34" height="16" rx="2" fill="none" stroke={sel ? `rgba(${accentRgb},0.4)` : "rgba(255,255,255,0.08)"} strokeWidth="1" strokeDasharray="3 3"/>
+                      </svg>
+                    )},
+                ]).map((s) => {
+                  const sel = shape === s.id;
+                  return (
+                    <button key={s.id} className="sc-opt" onClick={() => setShape(s.id)} style={{
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: "4px",
+                      padding: "10px 6px", borderRadius: "12px", cursor: "pointer",
+                      border: `1px solid ${sel ? `rgba(${accentRgb},0.55)` : "rgba(255,255,255,0.07)"}`,
+                      background: sel ? `rgba(${accentRgb},0.1)` : "rgba(255,255,255,0.03)",
+                      boxShadow: sel ? `0 0 16px rgba(${accentRgb},0.2)` : "none",
+                    }}>
+                      {s.icon(sel)}
+                      <span style={{ fontSize: "9px", fontWeight: 600, fontFamily: "var(--font-orbitron)", letterSpacing: "0.08em", color: sel ? accent : "rgba(255,255,255,0.38)" }}>
+                        {s.label}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -492,42 +561,58 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
               </div>
 
               <div className="flex flex-col gap-2 flex-1">
-                {availableMaterials.map((m) => (
-                  <button key={m.id} className="sc-opt" onClick={() => setMaterial(m.id)} style={{
-                    display: "flex", alignItems: "center", gap: "12px", padding: "12px",
-                    borderRadius: "14px", cursor: "pointer", width: "100%", textAlign: "left",
-                    border: `1px solid ${material === m.id ? `rgba(${accentRgb},0.55)` : "rgba(255,255,255,0.07)"}`,
-                    background: material === m.id ? `rgba(${accentRgb},0.1)` : "rgba(255,255,255,0.03)",
-                    boxShadow: material === m.id ? `0 0 22px rgba(${accentRgb},0.2),inset 0 0 20px rgba(${accentRgb},0.04)` : "none",
-                  }}>
-                    <div style={{
-                      width: "48px", height: "48px", borderRadius: "12px", flexShrink: 0,
-                      border: "1px solid rgba(255,255,255,0.15)",
-                      boxShadow: material === m.id ? `0 0 12px rgba(${accentRgb},0.35)` : "none",
-                      ...m.style,
-                    }} />
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: "0.8125rem", fontWeight: 700, color: "white" }}>{m.label}</p>
-                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.38)", marginTop: "2px" }}>{m.desc}</p>
-                      {m.badge && (
-                        <span style={{
-                          display: "inline-block", marginTop: "4px", fontSize: "8px", fontWeight: 700,
-                          padding: "2px 8px", borderRadius: "100px", fontFamily: "var(--font-orbitron)",
-                          background: `rgba(${accentRgb},0.2)`, color: accent,
-                        }}>{m.badge}</span>
-                      )}
-                    </div>
-                    {material === m.id && (
+                {availableMaterials.map((m) => {
+                  const sel = material === m.id;
+                  return (
+                    <button key={m.id} className="sc-opt" onClick={() => setMaterial(m.id)} style={{
+                      borderRadius: "14px", cursor: "pointer", width: "100%", textAlign: "left",
+                      border: `2px solid ${sel ? accent : "rgba(255,255,255,0.07)"}`,
+                      background: sel ? `rgba(${accentRgb},0.08)` : "rgba(255,255,255,0.02)",
+                      boxShadow: sel ? `0 0 22px rgba(${accentRgb},0.3)` : "none",
+                      overflow: "hidden", padding: 0,
+                    }}>
+                      {/* Full-width swatch banner */}
                       <div style={{
-                        width: "20px", height: "20px", borderRadius: "50%", flexShrink: 0,
-                        background: accent, display: "flex", alignItems: "center", justifyContent: "center",
-                        boxShadow: `0 0 8px rgba(${accentRgb},0.7)`,
+                        height: "52px", width: "100%",
+                        ...m.style,
+                        borderBottom: `1px solid ${sel ? `rgba(${accentRgb},0.3)` : "rgba(255,255,255,0.06)"}`,
+                        position: "relative",
                       }}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                        {/* shine sweep on swatch */}
+                        <div style={{
+                          position: "absolute", inset: 0,
+                          background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(255,255,255,0.08) 100%)",
+                          pointerEvents: "none",
+                        }} />
+                        {sel && (
+                          <div style={{
+                            position: "absolute", top: "6px", right: "8px",
+                            width: "20px", height: "20px", borderRadius: "50%",
+                            background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.3)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </button>
-                ))}
+                      {/* label row */}
+                      <div style={{ padding: "9px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div>
+                          <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "white" }}>{m.label}</p>
+                          <p style={{ fontSize: "9px", color: "rgba(255,255,255,0.38)", marginTop: "1px" }}>{m.desc}</p>
+                        </div>
+                        {m.badge && (
+                          <span style={{
+                            fontSize: "8px", fontWeight: 700, padding: "3px 9px", borderRadius: "100px",
+                            fontFamily: "var(--font-orbitron)",
+                            background: sel ? `rgba(${accentRgb},0.25)` : "rgba(255,255,255,0.08)",
+                            color: sel ? accent : "rgba(255,255,255,0.5)",
+                          }}>{m.badge}</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -561,34 +646,76 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
                 </span>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                {([
-                  { id: "2x2" as SizeId, label: "Small",   sub: '2"', r: 13 },
-                  { id: "3x3" as SizeId, label: "Medium",  sub: '3"', r: 17 },
-                  { id: "4x4" as SizeId, label: "Large",   sub: '4"', r: 21 },
-                  { id: "5x5" as SizeId, label: "X-Large", sub: '5"', r: 25 },
-                ]).map((s) => (
-                  <button key={s.id} className="sc-opt" onClick={() => setSizeId(s.id)} style={{
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
-                    padding: "12px 8px", borderRadius: "14px", cursor: "pointer",
-                    border: `1px solid ${sizeId === s.id ? `rgba(${accentRgb},0.55)` : "rgba(255,255,255,0.07)"}`,
-                    background: sizeId === s.id ? `rgba(${accentRgb},0.1)` : "rgba(255,255,255,0.03)",
-                    boxShadow: sizeId === s.id ? `0 0 18px rgba(${accentRgb},0.2)` : "none",
-                  }}>
-                    <svg viewBox="0 0 58 58" style={{ width: "50px", height: "50px" }}>
-                      <circle cx="29" cy="29" r={s.r}
-                        fill={sizeId === s.id ? `rgba(${accentRgb},0.15)` : "rgba(255,255,255,0.04)"}
-                        stroke={sizeId === s.id ? accent : "rgba(255,255,255,0.18)"}
-                        strokeWidth="1.5"
-                      />
-                    </svg>
-                    <div style={{ textAlign: "center" }}>
-                      <p style={{ fontSize: "10px", fontWeight: 700, fontFamily: "var(--font-orbitron)", color: sizeId === s.id ? "white" : "rgba(255,255,255,0.45)" }}>{s.label}</p>
-                      <p style={{ fontSize: "9px", marginTop: "1px", color: sizeId === s.id ? accent : "rgba(255,255,255,0.28)" }}>{s.sub}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              {stickerType === "sheets" ? (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  {([
+                    { id: "4x2"    as SizeId, label: '4"×2"',   sub: "Small Sheet" },
+                    { id: "6x4"    as SizeId, label: '6"×4"',   sub: "Medium Sheet" },
+                    { id: "7x5"    as SizeId, label: '7"×5"',   sub: "Large Sheet" },
+                    { id: "11x8.5" as SizeId, label: '11"×8.5"',sub: "XL Sheet" },
+                  ]).map((s) => (
+                    <button key={s.id} className="sc-opt" onClick={() => setSizeId(s.id)} style={{
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: "6px",
+                      padding: "12px 8px", borderRadius: "14px", cursor: "pointer",
+                      border: `1px solid ${sizeId === s.id ? `rgba(${accentRgb},0.55)` : "rgba(255,255,255,0.07)"}`,
+                      background: sizeId === s.id ? `rgba(${accentRgb},0.1)` : "rgba(255,255,255,0.03)",
+                      boxShadow: sizeId === s.id ? `0 0 18px rgba(${accentRgb},0.2)` : "none",
+                    }}>
+                      <svg viewBox="0 0 60 40" style={{ width: "52px", height: "34px" }}>
+                        <rect x="3" y="3" width="54" height="34" rx="3"
+                          fill={sizeId === s.id ? `rgba(${accentRgb},0.15)` : "rgba(255,255,255,0.04)"}
+                          stroke={sizeId === s.id ? accent : "rgba(255,255,255,0.18)"} strokeWidth="1.5"/>
+                      </svg>
+                      <div style={{ textAlign: "center" }}>
+                        <p style={{ fontSize: "10px", fontWeight: 700, fontFamily: "var(--font-orbitron)", color: sizeId === s.id ? "white" : "rgba(255,255,255,0.45)" }}>{s.label}</p>
+                        <p style={{ fontSize: "8px", marginTop: "1px", color: sizeId === s.id ? accent : "rgba(255,255,255,0.28)" }}>{s.sub}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  {([
+                    { id: "2x2" as SizeId, label: "Small",   sub: '2"×2"', img: "/2 inch Stickers.png" },
+                    { id: "3x3" as SizeId, label: "Medium",  sub: '3"×3"', img: "/3 inch stickers.png" },
+                    { id: "4x4" as SizeId, label: "Large",   sub: '4"×4"', img: "/4 inch stickers.png" },
+                    { id: "5x5" as SizeId, label: "X-Large", sub: '5"×5"', img: "/5 inch stickers.png" },
+                  ]).map((s) => (
+                    <button key={s.id} className="sc-opt" onClick={() => setSizeId(s.id)} style={{
+                      position: "relative", overflow: "hidden",
+                      height: "96px", cursor: "pointer", padding: 0,
+                      borderRadius: "14px",
+                      border: `2px solid ${sizeId === s.id ? accent : "rgba(255,255,255,0.07)"}`,
+                      boxShadow: sizeId === s.id ? `0 0 20px rgba(${accentRgb},0.45)` : "none",
+                    }}>
+                      <Image src={s.img} alt={s.label} fill className="object-cover" unoptimized />
+                      {/* gradient overlay */}
+                      <div style={{
+                        position: "absolute", inset: 0,
+                        background: sizeId === s.id
+                          ? `linear-gradient(to top, rgba(${accentRgb},0.88) 0%, rgba(0,0,0,0.25) 65%)`
+                          : "linear-gradient(to top, rgba(2,2,20,0.92) 0%, rgba(0,0,0,0.35) 65%)",
+                        transition: "background 0.25s ease",
+                      }} />
+                      {/* checkmark */}
+                      {sizeId === s.id && (
+                        <div style={{
+                          position: "absolute", top: "7px", right: "7px",
+                          width: "18px", height: "18px", borderRadius: "50%",
+                          background: "white", display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        </div>
+                      )}
+                      {/* text */}
+                      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "7px 9px", textAlign: "left" }}>
+                        <p style={{ fontSize: "10px", fontWeight: 700, fontFamily: "var(--font-orbitron)", color: "white", lineHeight: 1.2 }}>{s.label}</p>
+                        <p style={{ fontSize: "8px", marginTop: "2px", color: sizeId === s.id ? `rgba(255,255,255,0.9)` : "rgba(255,255,255,0.5)" }}>{s.sub}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <button className="sc-opt" onClick={() => setSizeId("custom")} style={{
                 width: "100%", padding: "10px", borderRadius: "12px", cursor: "pointer",
@@ -650,11 +777,12 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "3px", flex: 1 }}>
-                {QTY_TIERS.map((tier) => {
-                  const { perUnit, total } = tierCalc(tier.qty, tier.discount);
-                  const active = selectedQty === tier.qty;
+                {BASE_QTYS.map((qty, i) => {
+                  const tiers = sizeId !== "custom" ? PRICING[stickerType]?.[sizeId] : null;
+                  const [pu, tot, sav] = tiers?.[i] ?? [0, 0, 0];
+                  const active = selectedTierQty === qty;
                   return (
-                    <button key={tier.qty} className="sc-opt" onClick={() => setSelectedQty(tier.qty)} style={{
+                    <button key={qty} className="sc-opt" onClick={() => setSelectedTierQty(qty)} style={{
                       display: "flex", alignItems: "center", justifyContent: "space-between",
                       padding: "9px 12px", borderRadius: "10px", cursor: "pointer",
                       border: `1px solid ${active ? `rgba(${accentRgb},0.5)` : "transparent"}`,
@@ -665,44 +793,97 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
                         fontFamily: "var(--font-orbitron)", fontSize: "11px", fontWeight: 700,
                         color: active ? "white" : "rgba(255,255,255,0.55)",
                       }}>
-                        {tier.qty >= 1000 ? `${tier.qty / 1000},000` : tier.qty}
+                        {qty >= 1000 ? `${qty / 1000}k` : qty}
                       </span>
                       <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                        <span style={{ fontSize: "12px", fontWeight: 600, color: active ? "white" : "rgba(255,255,255,0.7)" }}>
-                          {fmt(total)}
+                        <span style={{ fontSize: "10px", color: active ? `rgba(${accentRgb},0.7)` : "rgba(255,255,255,0.3)", marginRight: "2px" }}>
+                          {pu > 0 ? `${fmt(pu)} ea` : ""}
                         </span>
-                        {tier.discount > 0 && (
+                        <span style={{ fontSize: "12px", fontWeight: 600, color: active ? "white" : "rgba(255,255,255,0.7)" }}>
+                          {tot > 0 ? fmt(tot) : "—"}
+                        </span>
+                        {sav > 0 && (
                           <span style={{
                             fontSize: "8px", fontWeight: 700, padding: "2px 7px", borderRadius: "100px",
                             fontFamily: "var(--font-orbitron)",
                             background: active ? `rgba(${accentRgb},0.3)` : "rgba(34,197,94,0.14)",
                             color: active ? accent : "#22c55e",
                           }}>
-                            -{tier.discount}%
+                            -{sav}%
                           </span>
                         )}
                       </div>
                     </button>
                   );
                 })}
+
+                {/* Custom quantity row */}
+                <button className="sc-opt" onClick={() => setSelectedTierQty("custom")} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "9px 12px", borderRadius: "10px", cursor: "pointer",
+                  border: `1px solid ${selectedTierQty === "custom" ? `rgba(${accentRgb},0.5)` : "rgba(255,255,255,0.06)"}`,
+                  background: selectedTierQty === "custom" ? `rgba(${accentRgb},0.14)` : "rgba(255,255,255,0.02)",
+                  boxShadow: selectedTierQty === "custom" ? `0 0 16px rgba(${accentRgb},0.2)` : "none",
+                }}>
+                  <span style={{
+                    fontFamily: "var(--font-orbitron)", fontSize: "11px", fontWeight: 700,
+                    color: selectedTierQty === "custom" ? "white" : "rgba(255,255,255,0.45)",
+                  }}>Custom</span>
+                  <span style={{ fontSize: "9px", color: selectedTierQty === "custom" ? accent : "rgba(255,255,255,0.28)", fontFamily: "var(--font-orbitron)" }}>
+                    Enter qty →
+                  </span>
+                </button>
+
+                {selectedTierQty === "custom" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                    <input
+                      type="number" min="1" max="50000" step="1"
+                      value={customQtyInput}
+                      onChange={(e) => setCustomQtyInput(e.target.value)}
+                      placeholder="Enter quantity (min 1)"
+                      className="sc-input"
+                      style={{
+                        flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+                        color: "white", fontSize: "13px", padding: "9px 12px", borderRadius: "10px",
+                      }}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Total card */}
               <div style={{
                 marginTop: "6px", borderRadius: "14px", padding: "14px 16px",
-                display: "flex", alignItems: "center", justifyContent: "space-between",
                 background: `linear-gradient(135deg,rgba(${accentRgb},0.2) 0%,rgba(${accentRgb},0.1) 100%)`,
                 border: `1px solid rgba(${accentRgb},0.28)`,
                 boxShadow: `0 0 22px rgba(${accentRgb},0.14)`,
               }}>
-                <div>
-                  <p style={{ fontSize: "8px", fontFamily: "var(--font-orbitron)", color: `rgba(${accentRgb},0.65)`, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "3px" }}>Total</p>
-                  <p style={{ fontFamily: "var(--font-orbitron)", fontSize: "1.125rem", fontWeight: 900, color: "white" }}>{fmt(activeTotal)}</p>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: activeDiscount > 0 ? "8px" : "0" }}>
+                  <div>
+                    <p style={{ fontSize: "8px", fontFamily: "var(--font-orbitron)", color: `rgba(${accentRgb},0.65)`, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "3px" }}>Total</p>
+                    <p style={{ fontFamily: "var(--font-orbitron)", fontSize: "1.125rem", fontWeight: 900, color: sizeId === "custom" ? "rgba(255,255,255,0.35)" : "white" }}>
+                      {sizeId === "custom" ? "Custom Pricing" : activeTotal > 0 ? fmt(activeTotal) : "—"}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <p style={{ fontSize: "8px", fontFamily: "var(--font-orbitron)", color: `rgba(${accentRgb},0.65)`, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "3px" }}>Per unit</p>
+                    <p style={{ fontSize: "0.875rem", fontWeight: 700, color: `rgba(${accentRgb},0.9)` }}>
+                      {sizeId !== "custom" && activePerUnit > 0 ? fmt(activePerUnit) : "—"}
+                    </p>
+                  </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <p style={{ fontSize: "8px", fontFamily: "var(--font-orbitron)", color: `rgba(${accentRgb},0.65)`, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "3px" }}>Per unit</p>
-                  <p style={{ fontSize: "0.875rem", fontWeight: 700, color: `rgba(${accentRgb},0.9)` }}>{fmt(activePerUnit)}</p>
-                </div>
+                {activeDiscount > 0 && (
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: "6px",
+                    padding: "5px 10px", borderRadius: "8px",
+                    background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.2)",
+                  }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span style={{ fontSize: "9px", fontFamily: "var(--font-orbitron)", color: "#22c55e", fontWeight: 700 }}>
+                      You save {activeDiscount}% vs buying 50
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
