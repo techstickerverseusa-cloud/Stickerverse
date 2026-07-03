@@ -63,39 +63,85 @@ const TYPE_CONFIG: Record<StickerType, {
 
 const BASE_QTYS = [50, 100, 200, 300, 500, 1000, 3000] as const;
 
+// Sheets use fixed lookup (not covered by client's sticker pricing algorithm)
 // [perUnit, total, savings%]
-const PRICING: Record<StickerType, Partial<Record<string, readonly [number, number, number][]>>> = {
-  vinyl: {
-    "2x2":[[1.17,58.50,0],[0.76,76.05,35],[0.54,107.64,54],[0.46,136.89,61],[0.37,187.50,68],[0.30,304.20,74],[0.20,596.70,83]],
-    "3x3":[[1.35,67.50,0],[0.88,87.75,35],[0.62,124.20,54],[0.53,157.95,61],[0.43,216.00,68],[0.35,351.00,74],[0.23,688.50,83]],
-    "4x4":[[1.62,81.00,0],[1.13,113.40,30],[0.86,171.72,47],[0.75,223.54,54],[0.63,315.90,61],[0.53,534.60,67],[0.37,1117.80,77]],
-    "5x5":[[1.91,95.00,0],[1.43,143.25,25],[1.15,229.20,40],[1.01,303.69,47],[0.90,448.85,53],[0.76,764.00,60],[0.59,1776.30,69]],
-  },
-  holographic: {
-    "2x2":[[1.48,74.00,0],[0.96,96.20,35],[0.68,136.16,54],[0.58,173.17,61],[0.47,236.81,68],[0.38,384.81,74],[0.25,754.83,83]],
-    "3x3":[[1.71,85.39,0],[1.11,111.00,35],[0.79,157.11,54],[0.67,199.81,61],[0.55,273.24,68],[0.44,444.02,74],[0.29,870.95,83]],
-    "4x4":[[2.05,102.46,0],[1.43,143.45,30],[1.09,217.23,47],[0.94,282.80,54],[0.80,399.61,61],[0.68,676.27,67],[0.47,1414.02,77]],
-    "5x5":[[2.42,120.81,0],[1.81,181.21,25],[1.45,289.94,40],[1.28,384.17,47],[1.14,567.80,53],[0.97,966.46,60],[0.75,2247.02,69]],
-  },
-  chrome: {
-    "2x2":[[1.48,74.00,0],[0.96,96.20,35],[0.68,136.16,54],[0.58,173.17,61],[0.47,236.81,68],[0.38,384.81,74],[0.25,754.83,83]],
-    "3x3":[[1.71,85.39,0],[1.11,111.00,35],[0.79,157.11,54],[0.67,199.81,61],[0.55,273.24,68],[0.44,444.02,74],[0.29,870.95,83]],
-    "4x4":[[2.05,102.46,0],[1.43,143.45,30],[1.09,217.23,47],[0.94,282.80,54],[0.80,399.61,61],[0.68,676.27,67],[0.47,1414.02,77]],
-    "5x5":[[2.42,120.81,0],[1.81,181.21,25],[1.45,289.94,40],[1.28,384.17,47],[1.14,567.80,53],[0.97,966.46,60],[0.75,2247.02,69]],
-  },
-  glitter: {
-    "2x2":[[1.35,67.27,0],[0.87,87.46,35],[0.62,123.79,54],[0.52,157.42,61],[0.43,215.28,68],[0.35,349.83,74],[0.23,686.21,83]],
-    "3x3":[[1.55,77.43,0],[1.01,100.91,35],[0.71,142.83,54],[0.61,181.64,61],[0.50,248.40,68],[0.40,403.65,74],[0.26,791.78,83]],
-    "4x4":[[1.86,93.15,0],[1.30,130.41,30],[0.99,197.48,47],[0.86,257.09,54],[0.73,362.29,61],[0.61,614.79,67],[0.43,1285.47,77]],
-    "5x5":[[1.86,93.15,0],[1.30,130.41,30],[0.99,197.48,47],[0.86,257.09,54],[0.73,362.29,61],[0.61,614.79,67],[0.43,1285.47,77]],
-  },
-  sheets: {
-    "4x2":   [[1.33,66.50,0],[0.86,86.45,35],[0.61,122.36,54],[0.52,155.61,61],[0.43,212.80,68],[0.35,345.80,74],[0.23,678.30,83]],
-    "6x4":   [[1.87,93.50,0],[1.40,140.25,25],[1.12,224.40,40],[0.99,297.33,47],[0.88,439.45,53],[0.75,748.00,60],[0.58,1739.10,69]],
-    "7x5":   [[2.22,111.00,0],[1.67,166.50,25],[1.33,266.40,40],[1.18,352.98,47],[1.04,521.70,53],[0.89,888.00,60],[0.69,2064.60,69]],
-    "11x8.5":[[3.78,189.00,0],[3.10,309.96,18],[2.65,529.20,30],[2.42,725.76,36],[2.15,1077.30,43],[1.89,1890.00,50],[1.78,5329.80,53]],
-  },
+const SHEETS_PRICING: Partial<Record<string, readonly [number, number, number][]>> = {
+  "4x2":    [[1.33,66.50,0],[0.86,86.45,35],[0.61,122.36,54],[0.52,155.61,61],[0.43,212.80,68],[0.35,345.80,74],[0.23,678.30,83]],
+  "6x4":    [[1.87,93.50,0],[1.40,140.25,25],[1.12,224.40,40],[0.99,297.33,47],[0.88,439.45,53],[0.75,748.00,60],[0.58,1739.10,69]],
+  "7x5":    [[2.22,111.00,0],[1.67,166.50,25],[1.33,266.40,40],[1.18,352.98,47],[1.04,521.70,53],[0.89,888.00,60],[0.69,2064.60,69]],
+  "11x8.5": [[3.78,189.00,0],[3.10,309.96,18],[2.65,529.20,30],[2.42,725.76,36],[2.15,1077.30,43],[1.89,1890.00,50],[1.78,5329.80,53]],
 };
+
+// ─── Sticker Pricing Engine v2 ────────────────────────────────────────────────
+// Base price table (white vinyl, all sizes, key breakpoint quantities)
+const PRICE_TABLE: Record<string, Record<number, number>> = {
+  "2x2": { 50: 58.50, 100: 76.05, 200: 107.64, 300: 136.64, 500: 187.20, 1000: 304.20, 3000: 596.70 },
+  "3x3": { 50: 68.50, 100: 87.75, 200: 124.20, 300: 157.95, 500: 216.00, 1000: 351.00, 3000: 688.50 },
+  "4x4": { 50: 81.00, 100: 113.40, 200: 171.72, 300: 223.56, 500: 315.90, 1000: 534.60, 3000: 1117.80 },
+  "5x5": { 50: 95.50, 100: 143.25, 200: 229.20, 300: 303.69, 500: 448.85, 1000: 764.00, 3000: 1776.30 },
+};
+
+const SIZE_PROFILES: Record<string, { width: number; height: number }> = {
+  "2x2": { width: 2, height: 2 },
+  "3x3": { width: 3, height: 3 },
+  "4x4": { width: 4, height: 4 },
+  "5x5": { width: 5, height: 5 },
+};
+
+// Material multipliers (applied on top of base white-vinyl price)
+const MATERIAL_MULTIPLIERS: Record<string, number> = {
+  whiteVinyl:  1.0000,
+  glitter:     1.1396,
+  holographic: 1.2536,
+  chrome:      1.2536,
+};
+
+function _lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
+function _clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
+
+function _getBounds(value: number, list: number[]): [number, number] {
+  if (value <= list[0]) return [list[0], list[0]];
+  if (value >= list[list.length - 1]) return [list[list.length - 1], list[list.length - 1]];
+  for (let i = 0; i < list.length - 1; i++) {
+    if (value >= list[i] && value <= list[i + 1]) return [list[i], list[i + 1]];
+  }
+  return [list[0], list[0]];
+}
+
+function _interpolateQty(sizeKey: string, quantity: number): number {
+  const table = PRICE_TABLE[sizeKey];
+  const qtys = Object.keys(table).map(Number).sort((a, b) => a - b);
+  const [q1, q2] = _getBounds(quantity, qtys);
+  const t = q1 === q2 ? 0 : (quantity - q1) / (q2 - q1);
+  return _lerp(table[q1], table[q2], t);
+}
+
+function _sizeScore(w: number, h: number) {
+  return Math.min(w, h) * 0.65 + Math.max(w, h) * 0.35;
+}
+
+function calcStickerPrice(width: number, height: number, quantity: number, matKey: string): number {
+  const scored = Object.keys(SIZE_PROFILES)
+    .map(k => ({ k, score: _sizeScore(SIZE_PROFILES[k].width, SIZE_PROFILES[k].height) }))
+    .sort((a, b) => a.score - b.score);
+
+  const targetScore = _sizeScore(width, height);
+  const scoreList = scored.map(s => s.score);
+  const [s1, s2] = _getBounds(targetScore, scoreList);
+
+  const lower = scored.find(s => s.score === s1)!;
+  const upper = scored.find(s => s.score === s2)!;
+  const sizeT = s1 === s2 ? 0 : (targetScore - s1) / (s2 - s1);
+
+  let price = _lerp(_interpolateQty(lower.k, quantity), _interpolateQty(upper.k, quantity), sizeT);
+
+  // Area protection: long/narrow stickers price higher than score-only would suggest
+  const areaFactor = _clamp(Math.sqrt((width * height) / (targetScore * targetScore)), 0.90, 1.25);
+  price *= areaFactor;
+
+  price *= (MATERIAL_MULTIPLIERS[matKey] ?? 1.0);
+  return Number(price.toFixed(2));
+}
 
 const TYPE_HERO_IMG: Record<StickerType, string> = {
   vinyl:       "/Vinyl Stickers.png",
@@ -152,15 +198,49 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
     : selectedTierQty;
 
   function getPrice(qty: number): { perUnit: number; total: number; savings: number } {
-    if (sizeId === "custom" || qty <= 0) return { perUnit: 0, total: 0, savings: 0 };
-    const tiers = PRICING[stickerType]?.[sizeId];
-    if (!tiers) return { perUnit: 0, total: 0, savings: 0 };
-    let idx = 0;
-    for (let i = 0; i < BASE_QTYS.length; i++) {
-      if (BASE_QTYS[i] <= qty) idx = i; else break;
+    if (qty <= 0) return { perUnit: 0, total: 0, savings: 0 };
+
+    // Sheets: fixed lookup table
+    if (stickerType === "sheets") {
+      if (sizeId === "custom") return { perUnit: 0, total: 0, savings: 0 };
+      const tiers = SHEETS_PRICING[sizeId];
+      if (!tiers) return { perUnit: 0, total: 0, savings: 0 };
+      let idx = 0;
+      for (let i = 0; i < BASE_QTYS.length; i++) {
+        if (BASE_QTYS[i] <= qty) idx = i; else break;
+      }
+      const [perUnit, exactTotal, savings] = tiers[idx];
+      const total = BASE_QTYS[idx] === qty ? exactTotal : Math.round(perUnit * qty * 100) / 100;
+      return { perUnit, total, savings };
     }
-    const [perUnit, exactTotal, savings] = tiers[idx];
-    const total = BASE_QTYS[idx] === qty ? exactTotal : Math.round(perUnit * qty * 100) / 100;
+
+    // Stickers: get dimensions (standard or custom)
+    let w: number, h: number;
+    if (sizeId === "custom") {
+      w = parseFloat(customW);
+      h = parseFloat(customH);
+      if (!isFinite(w) || !isFinite(h) || w <= 0 || h <= 0) return { perUnit: 0, total: 0, savings: 0 };
+    } else {
+      const parts = sizeId.match(/^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/);
+      if (!parts) return { perUnit: 0, total: 0, savings: 0 };
+      w = parseFloat(parts[1]);
+      h = parseFloat(parts[2]);
+    }
+
+    // Map sticker type → material key; gloss adds 5% on any finish
+    const matKey = stickerType === "holographic" ? "holographic"
+      : stickerType === "chrome" ? "chrome"
+      : stickerType === "glitter" ? "glitter"
+      : "whiteVinyl";
+    const glossMult = material === "gloss" ? 1.05 : 1.0;
+
+    const total = Math.round(calcStickerPrice(w, h, qty, matKey) * glossMult * 100) / 100;
+    const perUnit = Math.round((total / qty) * 100) / 100;
+
+    // Savings vs buying 50 units
+    const base50PerUnit = Math.round(calcStickerPrice(w, h, 50, matKey) * glossMult * 100) / 100 / 50;
+    const savings = qty > 50 ? Math.max(0, Math.round((1 - perUnit / base50PerUnit) * 100)) : 0;
+
     return { perUnit, total, savings };
   }
 
@@ -790,9 +870,8 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "3px", flex: 1 }}>
-                {BASE_QTYS.map((qty, i) => {
-                  const tiers = sizeId !== "custom" ? PRICING[stickerType]?.[sizeId] : null;
-                  const [pu, tot, sav] = tiers?.[i] ?? [0, 0, 0];
+                {BASE_QTYS.map((qty) => {
+                  const { perUnit: pu, total: tot, savings: sav } = getPrice(qty);
                   const active = selectedTierQty === qty;
                   return (
                     <button key={qty} className="sc-opt" onClick={() => setSelectedTierQty(qty)} style={{
@@ -874,14 +953,14 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: activeDiscount > 0 ? "8px" : "0" }}>
                   <div>
                     <p style={{ fontSize: "8px", fontFamily: "var(--font-orbitron)", color: `rgba(${accentRgb},0.65)`, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "3px" }}>Total</p>
-                    <p style={{ fontFamily: "var(--font-orbitron)", fontSize: "1.125rem", fontWeight: 900, color: sizeId === "custom" ? "rgba(255,255,255,0.35)" : "white" }}>
-                      {sizeId === "custom" ? "Custom Pricing" : activeTotal > 0 ? fmt(activeTotal) : "—"}
+                    <p style={{ fontFamily: "var(--font-orbitron)", fontSize: "1.125rem", fontWeight: 900, color: "white" }}>
+                      {activeTotal > 0 ? fmt(activeTotal) : sizeId === "custom" ? "Enter size" : "—"}
                     </p>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <p style={{ fontSize: "8px", fontFamily: "var(--font-orbitron)", color: `rgba(${accentRgb},0.65)`, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "3px" }}>Per unit</p>
                     <p style={{ fontSize: "0.875rem", fontWeight: 700, color: `rgba(${accentRgb},0.9)` }}>
-                      {sizeId !== "custom" && activePerUnit > 0 ? fmt(activePerUnit) : "—"}
+                      {activePerUnit > 0 ? fmt(activePerUnit) : "—"}
                     </p>
                   </div>
                 </div>
