@@ -96,6 +96,14 @@ const MATERIAL_MULTIPLIERS: Record<string, number> = {
   chrome:      1.2536,
 };
 
+// Minimum per-unit price floors — price never drops below these regardless of quantity
+const PRICE_FLOORS: Record<string, Record<string, number>> = {
+  whiteVinyl:  { "2x2": 0.15, "3x3": 0.18, "4x4": 0.29, "5x5": 0.50 },
+  glitter:     { "2x2": 0.17, "3x3": 0.20, "4x4": 0.34, "5x5": 0.57 },
+  holographic: { "2x2": 0.19, "3x3": 0.22, "4x4": 0.37, "5x5": 0.63 },
+  chrome:      { "2x2": 0.19, "3x3": 0.22, "4x4": 0.37, "5x5": 0.63 },
+};
+
 function _lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 function _clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 
@@ -118,6 +126,24 @@ function _interpolateQty(sizeKey: string, quantity: number): number {
 
 function _sizeScore(w: number, h: number) {
   return Math.min(w, h) * 0.65 + Math.max(w, h) * 0.35;
+}
+
+// Interpolate the floor per-unit price for any custom size using the same size-score approach
+function getFloorPerUnit(width: number, height: number, matKey: string): number {
+  const floors = PRICE_FLOORS[matKey] ?? PRICE_FLOORS.whiteVinyl;
+  const scored = Object.keys(SIZE_PROFILES)
+    .map(k => ({ k, score: _sizeScore(SIZE_PROFILES[k].width, SIZE_PROFILES[k].height) }))
+    .sort((a, b) => a.score - b.score);
+
+  const targetScore = _sizeScore(width, height);
+  const scoreList = scored.map(s => s.score);
+  const [s1, s2] = _getBounds(targetScore, scoreList);
+
+  const lower = scored.find(s => s.score === s1)!;
+  const upper = scored.find(s => s.score === s2)!;
+  const t = s1 === s2 ? 0 : (targetScore - s1) / (s2 - s1);
+
+  return _lerp(floors[lower.k], floors[upper.k], t);
 }
 
 function calcStickerPrice(width: number, height: number, quantity: number, matKey: string): number {
@@ -234,12 +260,18 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
       : "whiteVinyl";
     const glossMult = material === "gloss" ? 1.05 : 1.0;
 
-    const total = Math.round(calcStickerPrice(w, h, qty, matKey) * glossMult * 100) / 100;
+    // Floor per-unit — price never drops below this regardless of quantity
+    const floorPerUnit = getFloorPerUnit(w, h, matKey) * glossMult;
+
+    const rawPerUnit = calcStickerPrice(w, h, qty, matKey) * glossMult / qty;
+    const effectivePerUnit = Math.max(rawPerUnit, floorPerUnit);
+    const total = Math.round(effectivePerUnit * qty * 100) / 100;
     const perUnit = Math.round((total / qty) * 100) / 100;
 
-    // Savings vs buying 50 units
-    const base50PerUnit = Math.round(calcStickerPrice(w, h, 50, matKey) * glossMult * 100) / 100 / 50;
-    const savings = qty > 50 ? Math.max(0, Math.round((1 - perUnit / base50PerUnit) * 100)) : 0;
+    // Savings vs buying 50 units (floor applied to base too)
+    const raw50PerUnit = calcStickerPrice(w, h, 50, matKey) * glossMult / 50;
+    const effective50PerUnit = Math.max(raw50PerUnit, floorPerUnit);
+    const savings = qty > 50 ? Math.max(0, Math.round((1 - effectivePerUnit / effective50PerUnit) * 100)) : 0;
 
     return { perUnit, total, savings };
   }
