@@ -61,10 +61,9 @@ const TYPE_CONFIG: Record<StickerType, {
 
 // ─── Pricing ──────────────────────────────────────────────────────────────────
 
-const BASE_QTYS = [50, 100, 200, 300, 500, 1000, 3000] as const;
+const BASE_QTYS = [15, 50, 100, 200, 300, 500, 1000, 3000] as const;
 
-// Sheets use fixed lookup (not covered by client's sticker pricing algorithm)
-// [perUnit, total, savings%]
+// Sheets — fixed lookup for standard sizes [perUnit, total, savings%]
 const SHEETS_PRICING: Partial<Record<string, readonly [number, number, number][]>> = {
   "4x2":    [[1.33,66.50,0],[0.86,86.45,35],[0.61,122.36,54],[0.52,155.61,61],[0.43,212.80,68],[0.35,345.80,74],[0.23,678.30,83]],
   "6x4":    [[1.87,93.50,0],[1.40,140.25,25],[1.12,224.40,40],[0.99,297.33,47],[0.88,439.45,53],[0.75,748.00,60],[0.58,1739.10,69]],
@@ -72,13 +71,28 @@ const SHEETS_PRICING: Partial<Record<string, readonly [number, number, number][]
   "11x8.5": [[3.78,189.00,0],[3.10,309.96,18],[2.65,529.20,30],[2.42,725.76,36],[2.15,1077.30,43],[1.89,1890.00,50],[1.78,5329.80,53]],
 };
 
+// Sheets — totals by size/qty for custom-size interpolation
+const SHEETS_PRICE_TABLE: Record<string, Record<number, number>> = {
+  "4x2":    { 50: 66.50, 100: 86.45, 200: 122.36, 300: 155.61, 500: 212.80, 1000: 345.80, 3000: 678.30 },
+  "6x4":    { 50: 93.50, 100: 140.25, 200: 224.40, 300: 297.33, 500: 439.45, 1000: 748.00, 3000: 1739.10 },
+  "7x5":    { 50: 111.00, 100: 166.50, 200: 266.40, 300: 352.98, 500: 521.70, 1000: 888.00, 3000: 2064.60 },
+  "11x8.5": { 50: 189.00, 100: 309.96, 200: 529.20, 300: 725.76, 500: 1077.30, 1000: 1890.00, 3000: 5329.80 },
+};
+
+const SHEETS_SIZE_PROFILES: Record<string, { width: number; height: number }> = {
+  "4x2":    { width: 4,  height: 2   },
+  "6x4":    { width: 6,  height: 4   },
+  "7x5":    { width: 7,  height: 5   },
+  "11x8.5": { width: 11, height: 8.5 },
+};
+
 // ─── Sticker Pricing Engine v2 ────────────────────────────────────────────────
 // Base price table (white vinyl, all sizes, key breakpoint quantities)
 const PRICE_TABLE: Record<string, Record<number, number>> = {
-  "2x2": { 50: 58.50, 100: 76.05, 200: 107.64, 300: 136.64, 500: 187.20, 1000: 304.20, 3000: 596.70 },
-  "3x3": { 50: 68.50, 100: 87.75, 200: 124.20, 300: 157.95, 500: 216.00, 1000: 351.00, 3000: 688.50 },
-  "4x4": { 50: 81.00, 100: 113.40, 200: 171.72, 300: 223.56, 500: 315.90, 1000: 534.60, 3000: 1117.80 },
-  "5x5": { 50: 95.50, 100: 143.25, 200: 229.20, 300: 303.69, 500: 448.85, 1000: 764.00, 3000: 1776.30 },
+  "2x2": { 15: 17.55, 50: 58.50, 100: 76.05, 200: 107.64, 300: 136.64, 500: 187.20, 1000: 304.20, 3000: 596.70 },
+  "3x3": { 15: 20.25, 50: 68.50, 100: 87.75, 200: 124.20, 300: 157.95, 500: 216.00, 1000: 351.00, 3000: 688.50 },
+  "4x4": { 15: 24.30, 50: 81.00, 100: 113.40, 200: 171.72, 300: 223.56, 500: 315.90, 1000: 534.60, 3000: 1117.80 },
+  "5x5": { 15: 28.65, 50: 95.50, 100: 143.25, 200: 229.20, 300: 303.69, 500: 448.85, 1000: 764.00, 3000: 1776.30 },
 };
 
 const SIZE_PROFILES: Record<string, { width: number; height: number }> = {
@@ -126,6 +140,35 @@ function _interpolateQty(sizeKey: string, quantity: number): number {
 
 function _sizeScore(w: number, h: number) {
   return Math.min(w, h) * 0.65 + Math.max(w, h) * 0.35;
+}
+
+function _interpolateSheetQty(sizeKey: string, quantity: number): number {
+  const table = SHEETS_PRICE_TABLE[sizeKey];
+  const qtys = Object.keys(table).map(Number).sort((a, b) => a - b);
+  const [q1, q2] = _getBounds(quantity, qtys);
+  const t = q1 === q2 ? 0 : (quantity - q1) / (q2 - q1);
+  return _lerp(table[q1], table[q2], t);
+}
+
+function calcSheetPrice(width: number, height: number, quantity: number): number {
+  const scored = Object.keys(SHEETS_SIZE_PROFILES)
+    .map(k => ({ k, score: _sizeScore(SHEETS_SIZE_PROFILES[k].width, SHEETS_SIZE_PROFILES[k].height) }))
+    .sort((a, b) => a.score - b.score);
+
+  const targetScore = _sizeScore(width, height);
+  const scoreList = scored.map(s => s.score);
+  const [s1, s2] = _getBounds(targetScore, scoreList);
+
+  const lower = scored.find(s => s.score === s1)!;
+  const upper = scored.find(s => s.score === s2)!;
+  const sizeT = s1 === s2 ? 0 : (targetScore - s1) / (s2 - s1);
+
+  let price = _lerp(_interpolateSheetQty(lower.k, quantity), _interpolateSheetQty(upper.k, quantity), sizeT);
+
+  const areaFactor = _clamp(Math.sqrt((width * height) / (targetScore * targetScore)), 0.90, 1.25);
+  price *= areaFactor;
+
+  return Number(price.toFixed(2));
 }
 
 // Interpolate the floor per-unit price for any custom size using the same size-score approach
@@ -226,18 +269,32 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
   function getPrice(qty: number): { perUnit: number; total: number; savings: number } {
     if (qty <= 0) return { perUnit: 0, total: 0, savings: 0 };
 
-    // Sheets: fixed lookup table
+    // Sheets
     if (stickerType === "sheets") {
-      if (sizeId === "custom") return { perUnit: 0, total: 0, savings: 0 };
+      const glossMult = material === "gloss" ? 1.05 : 1.0;
+
+      if (sizeId === "custom") {
+        const w = parseFloat(customW);
+        const h = parseFloat(customH);
+        if (!isFinite(w) || !isFinite(h) || w <= 0 || h <= 0) return { perUnit: 0, total: 0, savings: 0 };
+        const total = Math.round(calcSheetPrice(w, h, qty) * glossMult * 100) / 100;
+        const perUnit = Math.round((total / qty) * 100) / 100;
+        const base50PerUnit = Math.round(calcSheetPrice(w, h, 50) * glossMult * 100) / 100 / 50;
+        const savings = qty > 50 ? Math.max(0, Math.round((1 - perUnit / base50PerUnit) * 100)) : 0;
+        return { perUnit, total, savings };
+      }
+
       const tiers = SHEETS_PRICING[sizeId];
       if (!tiers) return { perUnit: 0, total: 0, savings: 0 };
       let idx = 0;
       for (let i = 0; i < BASE_QTYS.length; i++) {
         if (BASE_QTYS[i] <= qty) idx = i; else break;
       }
-      const [perUnit, exactTotal, savings] = tiers[idx];
-      const total = BASE_QTYS[idx] === qty ? exactTotal : Math.round(perUnit * qty * 100) / 100;
-      return { perUnit, total, savings };
+      const [pu, exactTotal, sav] = tiers[idx];
+      const rawTotal = BASE_QTYS[idx] === qty ? exactTotal : Math.round(pu * qty * 100) / 100;
+      const total = Math.round(rawTotal * glossMult * 100) / 100;
+      const perUnit = Math.round((total / qty) * 100) / 100;
+      return { perUnit, total, savings: sav };
     }
 
     // Stickers: get dimensions (standard or custom)
@@ -268,10 +325,10 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
     const total = Math.round(effectivePerUnit * qty * 100) / 100;
     const perUnit = Math.round((total / qty) * 100) / 100;
 
-    // Savings vs buying 50 units (floor applied to base too)
-    const raw50PerUnit = calcStickerPrice(w, h, 50, matKey) * glossMult / 50;
-    const effective50PerUnit = Math.max(raw50PerUnit, floorPerUnit);
-    const savings = qty > 50 ? Math.max(0, Math.round((1 - effectivePerUnit / effective50PerUnit) * 100)) : 0;
+    // Savings vs buying 15 units (minimum qty)
+    const raw15PerUnit = calcStickerPrice(w, h, 15, matKey) * glossMult / 15;
+    const effective15PerUnit = Math.max(raw15PerUnit, floorPerUnit);
+    const savings = qty > 15 ? Math.max(0, Math.round((1 - effectivePerUnit / effective15PerUnit) * 100)) : 0;
 
     return { perUnit, total, savings };
   }
@@ -331,7 +388,7 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
   }
 
   const canProceed = (sizeId !== "custom" || (customW !== "" && customH !== ""))
-    && (selectedTierQty !== "custom" || (customQtyInput !== "" && parseInt(customQtyInput) >= 1));
+    && (selectedTierQty !== "custom" || (customQtyInput !== "" && parseInt(customQtyInput) >= 15));
 
   const shapeToPreflightId: Record<ShapeId, PreflightShapeId> = {
     custom: "die-cut", circle: "circle", oval: "oval", square: "square", rectangle: "rectangle",
@@ -961,10 +1018,10 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
                 {selectedTierQty === "custom" && (
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
                     <input
-                      type="number" min="1" max="50000" step="1"
+                      type="number" min="15" max="50000" step="1"
                       value={customQtyInput}
                       onChange={(e) => setCustomQtyInput(e.target.value)}
-                      placeholder="Enter quantity (min 1)"
+                      placeholder="Enter quantity (min 15)"
                       className="sc-input"
                       style={{
                         flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
@@ -1004,7 +1061,7 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
                   }}>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                     <span style={{ fontSize: "9px", fontFamily: "var(--font-orbitron)", color: "#22c55e", fontWeight: 700 }}>
-                      You save {activeDiscount}% vs buying 50
+                      You save {activeDiscount}% vs buying 15
                     </span>
                   </div>
                 )}

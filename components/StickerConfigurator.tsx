@@ -127,8 +127,8 @@ function ShapeIcon({ id, size = 28 }: { id: ShapeId; size?: number }) {
   switch (id) {
     case "die-cut":
       return (
-        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={sw}>
-          <path d="M4 2 L14 1 L22 6 L23 15 L18 22 L8 23 L1 17 L2 8 Z" strokeLinejoin="round" />
+        <svg width={s} height={s} viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth={Math.max(1.5, s / 12)} strokeLinejoin="round">
+          <path d="M20,4 L24.1,14.3 L35.2,15.1 L26.7,22.2 L29.4,32.9 L20,27 L10.6,32.9 L13.3,22.2 L4.8,15.1 L15.9,14.3 Z" />
         </svg>
       );
     case "circle":
@@ -227,8 +227,11 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
   }
 
   const activeTier = QTY_TIERS.find((t) => t.qty === selectedQty) ?? QTY_TIERS[0];
-  const dealTotal = dealInfo.isDeal && dealInfo.dealQty ? baseUnitPrice * dealInfo.dealQty : null;
-  const dealPerUnit = dealInfo.isDeal && dealInfo.dealQty ? baseUnitPrice : null;
+  // For deals, Shopify price IS the total bundle price, not per-sticker
+  const dealTotal = dealInfo.isDeal && dealInfo.dealQty ? baseUnitPrice : null;
+  const dealPerUnit = dealInfo.isDeal && dealInfo.dealQty
+    ? Math.round((baseUnitPrice / dealInfo.dealQty) * 100) / 100
+    : null;
   const { perUnit: tierPerUnit, total: tierTotal } = tierCalc(activeTier.qty, activeTier.discount);
   const activePerUnit = dealPerUnit ?? tierPerUnit;
   const activeTotal   = dealTotal   ?? tierTotal;
@@ -317,7 +320,7 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
         }}
       />
     )}
-    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-12">
+    <div className="max-w-350 mx-auto px-4 sm:px-6 py-12">
       <div className="grid lg:grid-cols-2 gap-10 xl:gap-16">
 
         {/* ── Left: Gallery ── */}
@@ -403,7 +406,7 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
                 <button
                   key={i}
                   onClick={() => setActiveImg(i)}
-                  className={`flex-shrink-0 relative w-14 h-14 border transition-colors overflow-hidden ${
+                  className={`shrink-0 relative w-14 h-14 border transition-colors overflow-hidden ${
                     i === activeImg
                       ? "border-white/50"
                       : "border-white/5 hover:border-white/20"
@@ -448,11 +451,23 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
             </h1>
             {baseUnitPrice > 0 && (
               <p className="text-gray-400 mt-1.5 text-sm">
-                Starting from{" "}
-                <span className="text-white font-medium">
-                  {fmt(baseUnitPrice, currencyCode)}
-                </span>{" "}
-                / sticker
+                {dealInfo.isDeal && dealInfo.dealQty ? (
+                  <>
+                    Deal price:{" "}
+                    <span className="text-white font-medium">{fmt(baseUnitPrice, currencyCode)}</span>
+                    {" "}·{" "}
+                    <span className="text-white font-medium">
+                      {fmt(Math.round(baseUnitPrice / dealInfo.dealQty * 100) / 100, currencyCode)}
+                    </span>
+                    {" "}/ sticker
+                  </>
+                ) : (
+                  <>
+                    Starting from{" "}
+                    <span className="text-white font-medium">{fmt(baseUnitPrice, currencyCode)}</span>
+                    {" "}/ sticker
+                  </>
+                )}
               </p>
             )}
           </div>
@@ -469,11 +484,11 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
                   onClick={() => setCutType(ct.id)}
                   className={`flex flex-col items-start gap-1.5 p-4 border text-left transition-all duration-200 ${
                     cutType === ct.id
-                      ? "border-white bg-white/[0.06] text-white"
+                      ? "border-white bg-white/6 text-white"
                       : "border-white/10 text-gray-500 hover:border-white/25 hover:text-gray-300"
                   }`}
                 >
-                  <span className="text-xs font-bold tracking-[0.1em] uppercase" style={{ fontFamily: "var(--font-orbitron)" }}>
+                  <span className="text-xs font-bold tracking-widest uppercase" style={{ fontFamily: "var(--font-orbitron)" }}>
                     {ct.label}
                   </span>
                   <span className="text-[10px] text-gray-500 leading-relaxed">{ct.desc}</span>
@@ -521,7 +536,7 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
                   }`}
                 >
                   <div
-                    className="flex-shrink-0 w-8 h-8 rounded"
+                    className="shrink-0 w-8 h-8 rounded"
                     style={m.style}
                   />
                   <div>
@@ -535,7 +550,7 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
                     <p className="text-[10px] text-gray-500 mt-0.5">{m.desc}</p>
                   </div>
                   {material === m.id && (
-                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white flex-shrink-0" />
+                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white shrink-0" />
                   )}
                 </button>
               ))}
@@ -545,7 +560,7 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
           {/* 04 — Size */}
           <Section num="04" title="Choose Size">
             {dealInfo.isDeal && dealInfo.dealSize ? (
-              <div className="flex items-center gap-3 px-4 py-3 border border-white/10 bg-white/[0.02]">
+              <div className="flex items-center gap-3 px-4 py-3 border border-white/10 bg-white/2">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-indigo-400">
                   <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
                 </svg>
@@ -621,7 +636,7 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
           {/* 05 — Quantity */}
           <Section num="05" title="Quantity &amp; Pricing">
             {dealInfo.isDeal && dealInfo.dealQty ? (
-              <div className="flex items-center gap-3 px-4 py-3 border border-white/10 bg-white/[0.02]">
+              <div className="flex items-center gap-3 px-4 py-3 border border-white/10 bg-white/2">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-indigo-400">
                   <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>
                 </svg>
@@ -685,12 +700,12 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
               onDragLeave={() => setDragging(false)}
               onDrop={handleDrop}
               onClick={() => fileRef.current?.click()}
-              className={`relative border-2 border-dashed cursor-pointer transition-all duration-200 min-h-[140px] flex flex-col items-center justify-center gap-3 p-6 ${
+              className={`relative border-2 border-dashed cursor-pointer transition-all duration-200 min-h-35 flex flex-col items-center justify-center gap-3 p-6 ${
                 dragging
                   ? "border-white/50 bg-white/5"
                   : file
                   ? "border-white/20 bg-white/3"
-                  : "border-white/10 hover:border-white/25 bg-white/[0.02]"
+                  : "border-white/10 hover:border-white/25 bg-white/2"
               }`}
             >
               <input
@@ -746,7 +761,7 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
             {file && (
               <div className="mt-3 flex items-center gap-3 flex-wrap">
                 {proofResult && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 border border-green-500/30 bg-green-500/[0.04]">
+                  <div className="flex items-center gap-2 px-3 py-1.5 border border-green-500/30 bg-green-500/4">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
@@ -785,7 +800,7 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
           </Section>
 
           {/* ── Price summary + CTA ── */}
-          <div className="border border-white/10 bg-white/[0.02] p-5 sticky bottom-0 backdrop-blur-sm">
+          <div className="border border-white/10 bg-white/2 p-5 sticky bottom-0 backdrop-blur-sm">
             <div className="flex items-end justify-between mb-4">
               <div>
                 <p className="text-xs text-gray-500 mb-1">
