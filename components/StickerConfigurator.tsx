@@ -197,8 +197,6 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
   const [customH, setCustomH] = useState("");
   const [selectedQty, setSelectedQty] = useState(dealInfo.dealQty ?? 100);
   const [file, setFile] = useState<File | null>(null);
-  const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [dragging, setDragging] = useState(false);
   const [instructions, setInstructions] = useState("");
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [proofResult, setProofResult] = useState<ProofResult | null>(null);
@@ -240,19 +238,6 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
   function handleFile(f: File) {
     setFile(f);
     setProofResult(null);
-    if (f.type.startsWith("image/")) {
-      const url = URL.createObjectURL(f);
-      setFilePreview(url);
-    } else {
-      setFilePreview(null);
-    }
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    setDragging(false);
-    const f = e.dataTransfer.files[0];
-    if (f) handleFile(f);
   }
 
   // Add to cart
@@ -690,106 +675,8 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
             )}
           </Section>
 
-          {/* 06 — Upload */}
-          <Section num="06" title="Upload Your Design">
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragging(true);
-              }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={handleDrop}
-              onClick={() => fileRef.current?.click()}
-              className={`relative border-2 border-dashed cursor-pointer transition-all duration-200 min-h-35 flex flex-col items-center justify-center gap-3 p-6 ${
-                dragging
-                  ? "border-white/50 bg-white/5"
-                  : file
-                  ? "border-white/20 bg-white/3"
-                  : "border-white/10 hover:border-white/25 bg-white/2"
-              }`}
-            >
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/png,image/jpeg,application/pdf,image/svg+xml"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleFile(f);
-                }}
-              />
-              {filePreview ? (
-                <div className="relative w-24 h-24">
-                  <Image
-                    src={filePreview}
-                    alt="Design preview"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-              ) : (
-                <svg
-                  width="32"
-                  height="32"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.25"
-                  className="text-gray-600"
-                >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" x2="12" y1="3" y2="15" />
-                </svg>
-              )}
-              <div className="text-center">
-                {file ? (
-                  <p className="text-sm text-white font-medium">{file.name}</p>
-                ) : (
-                  <>
-                    <p className="text-sm text-gray-300">
-                      Drop your file here or{" "}
-                      <span className="text-white underline underline-offset-2">click to browse</span>
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      PNG · JPG · PDF · SVG &nbsp;·&nbsp; Max 25 MB
-                    </p>
-                  </>
-                )}
-              </div>
-            </div>
-            {file && (
-              <div className="mt-3 flex items-center gap-3 flex-wrap">
-                {proofResult && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 border border-green-500/30 bg-green-500/4">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    <span className="text-[10px] text-green-400 tracking-wide" style={{ fontFamily: "var(--font-orbitron)" }}>
-                      Proof Approved
-                    </span>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFile(null);
-                    setFilePreview(null);
-                    setProofResult(null);
-                    if (fileRef.current) fileRef.current.value = "";
-                  }}
-                  className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
-                >
-                  × Remove file
-                </button>
-              </div>
-            )}
-          </Section>
-
-          {/* 07 — Instructions */}
-          <Section num="07" title="Special Instructions (Optional)">
+          {/* 06 — Instructions */}
+          <Section num="06" title="Special Instructions (Optional)">
             <textarea
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
@@ -798,6 +685,18 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
               className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-3 focus:outline-none focus:border-white/30 resize-none placeholder:text-gray-600 leading-relaxed"
             />
           </Section>
+
+          {/* Hidden file input — triggered by bottom CTA */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/png,image/jpeg,application/pdf,image/svg+xml"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleFile(f);
+            }}
+          />
 
           {/* ── Price summary + CTA ── */}
           <div className="border border-white/10 bg-white/2 p-5 sticky bottom-0 backdrop-blur-sm">
@@ -827,6 +726,36 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
               </div>
             </div>
 
+            {/* File status row */}
+            {file && !proofResult && (
+              <div className="flex items-center gap-3 mb-3 px-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-indigo-400 shrink-0">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>
+                </svg>
+                <span className="text-xs text-gray-300 truncate flex-1">{file.name}</span>
+                <button
+                  type="button"
+                  onClick={() => { setFile(null); setProofResult(null); if (fileRef.current) fileRef.current.value = ""; }}
+                  className="text-xs text-gray-600 hover:text-gray-400 transition-colors shrink-0"
+                >
+                  × Remove
+                </button>
+              </div>
+            )}
+            {proofResult && (
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                <span className="text-[10px] text-green-400 tracking-wide" style={{ fontFamily: "var(--font-orbitron)" }}>Proof Approved</span>
+                <button
+                  type="button"
+                  onClick={() => { setFile(null); setProofResult(null); if (fileRef.current) fileRef.current.value = ""; }}
+                  className="text-xs text-gray-600 hover:text-gray-400 transition-colors ml-auto"
+                >
+                  × Change
+                </button>
+              </div>
+            )}
+
             {proofResult ? (
               <button
                 onClick={handleAddToCart}
@@ -843,20 +772,35 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
             ) : (
               <button
                 type="button"
-                onClick={() => { if (file && canAddToCart) setPreflightOpen(true); }}
-                disabled={!file || !canAddToCart}
+                onClick={() => {
+                  if (file && canAddToCart) setPreflightOpen(true);
+                  else if (!file) fileRef.current?.click();
+                }}
+                disabled={!!file && !canAddToCart}
                 className={`w-full py-4 text-sm font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2 ${
                   file && canAddToCart
                     ? "bg-indigo-600 text-white hover:bg-indigo-500 active:scale-[0.99]"
+                    : !file
+                    ? "bg-indigo-600/80 text-white hover:bg-indigo-600 active:scale-[0.99]"
                     : "bg-white/10 text-gray-600 cursor-not-allowed"
                 }`}
                 style={{ fontFamily: "var(--font-orbitron)" }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-                {file ? "View Proof →" : "Upload Design to Continue"}
+                {file ? (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    View Proof →
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>
+                    </svg>
+                    Upload Design to Continue
+                  </>
+                )}
               </button>
             )}
 
