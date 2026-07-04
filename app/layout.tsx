@@ -17,6 +17,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} ${orbitron.variable} h-full`}>
       <body
+        suppressHydrationWarning
         className="min-h-full flex flex-col antialiased text-white"
         style={{
           backgroundColor: '#060608',

@@ -286,12 +286,14 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
 
       const tiers = SHEETS_PRICING[sizeId];
       if (!tiers) return { perUnit: 0, total: 0, savings: 0 };
+      // Sheets have fixed qty breakpoints independent of BASE_QTYS
+      const SHEET_QTY_BREAKS = [50, 100, 200, 300, 500, 1000, 3000];
       let idx = 0;
-      for (let i = 0; i < BASE_QTYS.length; i++) {
-        if (BASE_QTYS[i] <= qty) idx = i; else break;
+      for (let i = 0; i < SHEET_QTY_BREAKS.length; i++) {
+        if (SHEET_QTY_BREAKS[i] <= qty) idx = i; else break;
       }
       const [pu, exactTotal, sav] = tiers[idx];
-      const rawTotal = BASE_QTYS[idx] === qty ? exactTotal : Math.round(pu * qty * 100) / 100;
+      const rawTotal = SHEET_QTY_BREAKS[idx] === qty ? exactTotal : Math.round(pu * qty * 100) / 100;
       const total = Math.round(rawTotal * glossMult * 100) / 100;
       const perUnit = Math.round((total / qty) * 100) / 100;
       return { perUnit, total, savings: sav };
