@@ -61,7 +61,7 @@ const TYPE_CONFIG: Record<StickerType, {
 
 // ─── Pricing ──────────────────────────────────────────────────────────────────
 
-const BASE_QTYS = [15, 50, 100, 200, 300, 500, 1000, 3000] as const;
+const BASE_QTYS = [50, 100, 200, 300, 500, 1000, 3000] as const;
 
 // Sheets — fixed lookup for standard sizes [perUnit, total, savings%]
 const SHEETS_PRICING: Partial<Record<string, readonly [number, number, number][]>> = {
@@ -224,7 +224,7 @@ const TYPE_HERO_IMG: Record<StickerType, string> = {
 
 const ALL_MATERIALS: { id: MaterialId; label: string; desc: string; style: React.CSSProperties; badge?: string }[] = [
   { id: "matte",        label: "Matte",        desc: "Smooth, non-reflective finish",  style: { background: "linear-gradient(160deg,#e8e8e8 0%,#c8c8c8 100%)" } },
-  { id: "gloss",        label: "Gloss",        desc: "Shiny, vibrant colors",          style: { background: "linear-gradient(160deg,#f8f8f8 0%,#d0d8e8 50%,#b8c8d8 100%)" }, badge: "+5%" },
+  { id: "gloss",        label: "Gloss",        desc: "Shiny, vibrant colors",          style: { background: "linear-gradient(160deg,#f8f8f8 0%,#d0d8e8 50%,#b8c8d8 100%)" } },
   { id: "holographic",  label: "Holographic",  desc: "Stunning rainbow shimmer",       style: { background: "linear-gradient(135deg,#ff6b9d 0%,#c44dff 25%,#4d79ff 50%,#00d4aa 75%,#ffd700 100%)" } },
   { id: "chrome",       label: "Chrome",       desc: "Mirror-like metallic look",      style: { background: "linear-gradient(135deg,#c0c0c0 0%,#f8f8f8 40%,#a8a8a8 70%,#e8e8e8 100%)" } },
   { id: "glitter",      label: "Glitter",      desc: "Eye-catching sparkle",           style: { background: "linear-gradient(135deg,#ffd700 0%,#ff69b4 40%,#da70d6 70%,#ffd700 100%)" } },
@@ -271,7 +271,7 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
 
     // Sheets
     if (stickerType === "sheets") {
-      const glossMult = material === "gloss" ? 1.05 : 1.0;
+      const glossMult = 1.0;
 
       if (sizeId === "custom") {
         const w = parseFloat(customW);
@@ -317,7 +317,7 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
       : stickerType === "chrome" ? "chrome"
       : stickerType === "glitter" ? "glitter"
       : "whiteVinyl";
-    const glossMult = material === "gloss" ? 1.05 : 1.0;
+    const glossMult = 1.0;
 
     // Floor per-unit — price never drops below this regardless of quantity
     const floorPerUnit = getFloorPerUnit(w, h, matKey) * glossMult;

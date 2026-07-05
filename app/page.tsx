@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getAllCollections } from "@/lib/shopify-collections";
 import AnimatedClientWrapper from "./AnimatedClientWrapper";
+import GoogleReviewsSection from "@/components/GoogleReviewsSection";
 
 const FEATURES = [
   { num: '01', title: 'Ultra Premium Vinyl', desc: 'Crafted with laboratory-grade vinyl designed to withstand the harshest cosmic radiation and everyday wear.', icon: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5' },
@@ -435,6 +436,11 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* ══════════════════════════════════════════
+            GOOGLE REVIEWS SECTION
+           ══════════════════════════════════════════ */}
+        <GoogleReviewsSection />
 
         {/* ══════════════════════════════════════════
             CTA BANNER SECTION
