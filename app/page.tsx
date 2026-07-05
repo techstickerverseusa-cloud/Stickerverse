@@ -3,6 +3,7 @@ import Image from "next/image";
 import { getAllCollections } from "@/lib/shopify-collections";
 import AnimatedClientWrapper from "./AnimatedClientWrapper";
 import GoogleReviewsSection from "@/components/GoogleReviewsSection";
+import CollectionDescription from "@/components/CollectionDescription";
 
 const FEATURES = [
   { num: '01', title: 'Ultra Premium Vinyl', desc: 'Crafted with laboratory-grade vinyl designed to withstand the harshest cosmic radiation and everyday wear.', icon: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5' },
@@ -47,14 +48,14 @@ export default async function HomePage() {
             {/* Central breathing orb */}
             <div
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full animate-pulse-glow"
-              style={{ background: "radial-gradient(circle, rgba(90,70,210,0.18) 0%, rgba(60,40,180,0.06) 45%, transparent 70%)" }}
+              style={{ background: "radial-linear(circle, rgba(90,70,210,0.18) 0%, rgba(60,40,180,0.06) 45%, transparent 70%)" }}
             />
 
-            {/* Top gradient arc */}
+            {/* Top linear arc */}
             <div
               className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] rounded-full animate-pulse-glow-2"
               style={{
-                background: "radial-gradient(ellipse at top, rgba(100,80,230,0.22) 0%, transparent 65%)",
+                background: "radial-linear(ellipse at top, rgba(100,80,230,0.22) 0%, transparent 65%)",
                 animationDelay: "1s",
               }}
             />
@@ -63,7 +64,7 @@ export default async function HomePage() {
             <div
               className="absolute top-[12%] left-[8%] w-64 h-64 rounded-full animate-float"
               style={{
-                background: "radial-gradient(circle, rgba(80,60,200,0.14) 0%, transparent 70%)",
+                background: "radial-linear(circle, rgba(80,60,200,0.14) 0%, transparent 70%)",
                 animationDuration: "7s",
               }}
             />
@@ -72,7 +73,7 @@ export default async function HomePage() {
             <div
               className="absolute top-[8%] right-[10%] w-48 h-48 rounded-full animate-float-2"
               style={{
-                background: "radial-gradient(circle, rgba(120,90,255,0.12) 0%, transparent 70%)",
+                background: "radial-linear(circle, rgba(120,90,255,0.12) 0%, transparent 70%)",
                 animationDelay: "1.5s",
               }}
             />
@@ -81,7 +82,7 @@ export default async function HomePage() {
             <div
               className="absolute bottom-[15%] left-[12%] w-56 h-56 rounded-full animate-float"
               style={{
-                background: "radial-gradient(circle, rgba(60,40,160,0.12) 0%, transparent 70%)",
+                background: "radial-linear(circle, rgba(60,40,160,0.12) 0%, transparent 70%)",
                 animationDuration: "9s",
                 animationDelay: "2s",
               }}
@@ -91,7 +92,7 @@ export default async function HomePage() {
             <div
               className="absolute bottom-[10%] right-[8%] w-72 h-72 rounded-full animate-float-2"
               style={{
-                background: "radial-gradient(circle, rgba(100,70,220,0.1) 0%, transparent 70%)",
+                background: "radial-linear(circle, rgba(100,70,220,0.1) 0%, transparent 70%)",
                 animationDelay: "0.8s",
                 animationDuration: "11s",
               }}
@@ -101,7 +102,7 @@ export default async function HomePage() {
             <div
               className="absolute top-1/2 left-1/2 w-[600px] h-[600px] rounded-full opacity-[0.04] animate-rotate-slow"
               style={{
-                background: "conic-gradient(from 0deg, transparent 0%, rgba(120,100,255,1) 15%, transparent 30%, transparent 70%, rgba(80,60,200,1) 85%, transparent 100%)",
+                background: "conic-linear(from 0deg, transparent 0%, rgba(120,100,255,1) 15%, transparent 30%, transparent 70%, rgba(80,60,200,1) 85%, transparent 100%)",
               }}
             />
 
@@ -129,13 +130,13 @@ export default async function HomePage() {
             ))}
 
             {/* Bottom fade-out */}
-            <div className="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-[#060608] to-transparent" />
+            <div className="absolute bottom-0 inset-x-0 h-40 bg-linear-to-t from-[#060608] to-transparent" />
           </div>
 
           <div className="flex flex-col items-center w-full max-w-4xl mx-auto z-10">
             
             {/* Shipping Badge */}
-            <div className="inline-flex items-center gap-2.5 border border-white/[0.08] bg-white/[0.02] px-5 py-2 mb-8 backdrop-blur-md rounded-full">
+            <div className="inline-flex items-center gap-2.5 border border-white/8 bg-white/2 px-5 py-2 mb-8 backdrop-blur-md rounded-full">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span
                 className="text-[10px] tracking-[0.3em] uppercase text-zinc-400 font-semibold"
@@ -154,7 +155,7 @@ export default async function HomePage() {
               }}
             >
               MAKE IT <br />
-              <span className="bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
                 STICK.
               </span>
             </h1>
@@ -210,8 +211,8 @@ export default async function HomePage() {
             <span className="text-[9px] tracking-[0.4em] uppercase text-zinc-600" style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}>
               Scroll
             </span>
-            <div className="w-[1px] h-10 bg-gradient-to-b from-zinc-700 via-zinc-900 to-transparent relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-transparent to-indigo-500 animate-bounce" />
+            <div className="w-[1px] h-10 bg-linear-to-b from-zinc-700 via-zinc-900 to-transparent relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1/2 bg-linear-to-b from-transparent to-indigo-500 animate-bounce" />
             </div>
           </div>
         </section>
@@ -232,7 +233,7 @@ export default async function HomePage() {
               style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
             >
               <span className="text-white">Product </span>
-              <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 Categories
               </span>
             </h2>
@@ -265,9 +266,9 @@ export default async function HomePage() {
                         className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out group-hover:brightness-105"
                       />
                     ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/60 to-zinc-900 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-linear-to-br from-indigo-950/60 to-zinc-900 flex items-center justify-center">
                         <span
-                          className="text-[9rem] font-black text-white/[0.025] select-none"
+                          className="text-[9rem] font-black text-white/2.5 select-none"
                           style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
                         >
                           {col.title.charAt(0)}
@@ -276,9 +277,9 @@ export default async function HomePage() {
                     )}
 
                     {/* Right-edge blend into content (desktop) */}
-                    <div className="absolute inset-y-0 right-0 w-28 bg-gradient-to-r from-transparent to-[#060608] hidden sm:block" />
+                    <div className="absolute inset-y-0 right-0 w-28 bg-linear-to-r from-transparent to-[#060608] hidden sm:block" />
                     {/* Bottom-edge blend (mobile) */}
-                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#060608] to-transparent sm:hidden" />
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-[#060608] to-transparent sm:hidden" />
 
                     {/* Number badge */}
                     <div
@@ -290,7 +291,7 @@ export default async function HomePage() {
 
                     {/* Shimmer scan line on hover */}
                     <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 ease-in-out pointer-events-none"
-                      style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%)" }} />
+                      style={{ background: "linear-linear(to bottom, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%)" }} />
                   </div>
 
                   {/* ── Right: Content Panel ── */}
@@ -299,7 +300,7 @@ export default async function HomePage() {
                     {/* Ambient glow on hover */}
                     <div
                       className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                      style={{ background: "radial-gradient(500px circle at 20% 55%, rgba(99,102,241,0.08), transparent 70%)" }}
+                      style={{ background: "radial-linear(500px circle at 20% 55%, rgba(99,102,241,0.08), transparent 70%)" }}
                     />
 
                     {/* Label */}
@@ -319,11 +320,9 @@ export default async function HomePage() {
                     </h3>
 
                     {/* Description */}
-                    <p className="text-zinc-500 text-sm leading-7 max-w-md group-hover:text-zinc-300 transition-colors duration-500 relative z-10 font-normal">
-                      {col.description
-                        ? col.description
-                        : "Explore our curated collection of premium stickers and custom prints."}
-                    </p>
+                    <CollectionDescription
+                      text={col.description || "Explore our curated collection of premium stickers and custom prints."}
+                    />
 
                     {/* CTA row */}
                     <div className="flex items-center gap-3 relative z-10">
@@ -344,17 +343,17 @@ export default async function HomePage() {
                     </div>
                   </div>
 
-                  {/* Bottom animated gradient bar */}
+                  {/* Bottom animated linear bar */}
                   <div className="absolute bottom-0 inset-x-0 h-[2px] overflow-hidden">
-                    <div className="h-full w-0 group-hover:w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-700 ease-out" />
+                    <div className="h-full w-0 group-hover:w-full bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-700 ease-out" />
                   </div>
 
                   {/* Top highlight */}
-                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/0 to-transparent group-hover:via-indigo-400/50 transition-all duration-700" />
+                  <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-indigo-500/0 to-transparent group-hover:via-indigo-400/50 transition-all duration-700" />
 
                   {/* Left accent bar */}
                   <div className="absolute left-0 inset-y-0 w-[2px] overflow-hidden">
-                    <div className="w-full h-0 group-hover:h-full bg-gradient-to-b from-indigo-500/80 via-purple-500/60 to-transparent transition-all duration-600 ease-out" />
+                    <div className="w-full h-0 group-hover:h-full bg-linear-to-b from-indigo-500/80 via-purple-500/60 to-transparent transition-all duration-600 ease-out" />
                   </div>
                 </Link>
               ))}
@@ -384,7 +383,7 @@ export default async function HomePage() {
                 className="text-4xl md:text-5xl font-black tracking-tight text-white uppercase"
                 style={{ fontFamily: "var(--font-orbitron, sans-serif)" }}
               >
-                Built <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500 bg-clip-text text-transparent">Different</span>
+                Built <span className="bg-linear-to-r from-indigo-400 via-purple-400 to-pink-500 bg-clip-text text-transparent">Different</span>
               </h2>
             </div>
 
@@ -392,9 +391,9 @@ export default async function HomePage() {
               {FEATURES.map((f) => (
                 <div
                   key={f.title}
-                  className="relative group p-8 rounded-2xl border border-white/[0.04] bg-gradient-to-b from-white/[0.02] to-transparent hover:border-white/[0.12] hover:bg-white/[0.04] transition-all duration-300 backdrop-blur-md overflow-hidden select-none"
+                  className="relative group p-8 rounded-2xl border border-white/[0.04] bg-linear-to-b from-white/[0.02] to-transparent hover:border-white/[0.12] hover:bg-white/[0.04] transition-all duration-300 backdrop-blur-md overflow-hidden select-none"
                 >
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(400px_circle_at_50%_0px,rgba(99,102,241,0.06),transparent)] pointer-events-none" />
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-linear(400px_circle_at_50%_0px,rgba(99,102,241,0.06),transparent)] pointer-events-none" />
 
                   <span
                     className="absolute top-2 right-4 text-[5.5rem] font-black text-white/[0.015] leading-none pointer-events-none group-hover:text-indigo-500/[0.04] group-hover:scale-105 transition-all duration-500 transform origin-top-right"
@@ -403,7 +402,7 @@ export default async function HomePage() {
                     {f.num}
                   </span>
 
-                  <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-indigo-500/0 to-transparent group-hover:via-indigo-400/60 transition-all duration-700" />
+                  <div className="absolute inset-x-0 top-0 h-[1px] bg-linear-to-r from-transparent via-indigo-500/0 to-transparent group-hover:via-indigo-400/60 transition-all duration-700" />
 
                   <div className="relative z-10 mb-8">
                     <div className="w-12 h-12 rounded-xl border border-white/[0.08] flex items-center justify-center bg-zinc-900/60 group-hover:border-indigo-500/40 group-hover:bg-indigo-500/[0.05] shadow-xl transition-all duration-300">
@@ -430,7 +429,7 @@ export default async function HomePage() {
                     </p>
                   </div>
 
-                  <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-gradient-to-r from-indigo-500 to-purple-500 group-hover:w-full transition-all duration-500 ease-out" />
+                  <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-linear-to-r from-indigo-500 to-purple-500 group-hover:w-full transition-all duration-500 ease-out" />
                 </div>
               ))}
             </div>
@@ -449,13 +448,13 @@ export default async function HomePage() {
           <div className="max-w-[1400px] mx-auto">
             <div className="relative border border-white/[0.06] rounded-2xl p-10 md:p-20 text-center overflow-hidden bg-white/[0.02]">
               <div className="absolute inset-0 -z-10 pointer-events-none"
-                style={{ background: "radial-gradient(ellipse 70% 70% at 50% 50%, rgba(79,70,229,0.15) 0%, transparent 75%)" }}
+                style={{ background: "radial-linear(ellipse 70% 70% at 50% 50%, rgba(79,70,229,0.15) 0%, transparent 75%)" }}
               />
               
-              <div className="absolute top-0 left-0 w-24 h-px bg-gradient-to-r from-indigo-500/40 to-transparent" />
-              <div className="absolute top-0 left-0 h-24 w-px bg-gradient-to-b from-indigo-500/40 to-transparent" />
-              <div className="absolute bottom-0 right-0 w-24 h-px bg-gradient-to-l from-purple-500/30 to-transparent" />
-              <div className="absolute bottom-0 right-0 h-24 w-px bg-gradient-to-t from-purple-500/30 to-transparent" />
+              <div className="absolute top-0 left-0 w-24 h-px bg-linear-to-r from-indigo-500/40 to-transparent" />
+              <div className="absolute top-0 left-0 h-24 w-px bg-linear-to-b from-indigo-500/40 to-transparent" />
+              <div className="absolute bottom-0 right-0 w-24 h-px bg-linear-to-l from-purple-500/30 to-transparent" />
+              <div className="absolute bottom-0 right-0 h-24 w-px bg-linear-to-t from-purple-500/30 to-transparent" />
 
               <p
                 className="text-[10px] tracking-[0.4em] uppercase text-zinc-500 font-bold mb-4"
