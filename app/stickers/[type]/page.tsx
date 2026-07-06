@@ -14,6 +14,10 @@ type FAQ = { q: string; a: string };
 
 const COMMON_FAQS: FAQ[] = [
   {
+    q: "What file formats do you accept?",
+    a: "We accept PNG, JPG, PDF, SVG, and AI files. For best results, upload high-resolution files (300 DPI or higher) with transparent backgrounds when possible. PNG files work great for most designs!",
+  },
+  {
     q: "Can I get a proof before printing?",
     a: "Absolutely! We provide a free online proof before printing so you can see exactly how your stickers will look. You'll receive the proof within 24 hours and can request revisions if needed.",
   },
@@ -105,7 +109,8 @@ const TYPE_FAQS: Record<StickerType, FAQ[]> = {
 };
 
 function FAQSection({ type }: { type: StickerType }) {
-  const faqs = [...TYPE_FAQS[type], ...COMMON_FAQS];
+  const [fileFormatFaq, ...restCommon] = COMMON_FAQS;
+  const faqs = [fileFormatFaq, ...TYPE_FAQS[type], ...restCommon];
   return (
     <section className="max-w-3xl mx-auto px-6 py-16">
       <h2
@@ -138,7 +143,7 @@ export default async function StickerTypePage({ params }: Props) {
   if (!VALID_TYPES.includes(type as StickerType)) notFound();
 
   return (
-    <main className="min-h-screen overflow-x-hidde max-w-6xl mx-auto">
+    <main className="min-h-screen overflow-x-hidden max-w-6xl mx-auto">
 
       {/* Back to sticker types */}
       <div className="px-6 pt-8">
@@ -147,7 +152,7 @@ export default async function StickerTypePage({ params }: Props) {
           className="group inline-flex items-center gap-2.5"
           style={{ fontFamily: "var(--font-orbitron)" }}
         >
-          <span className="w-8 h-8 border border-white/[0.08] flex items-center justify-center text-gray-500 group-hover:border-white/25 group-hover:text-white group-hover:bg-white/[0.04] transition-all duration-300">
+          <span className="w-8 h-8 border border-white/8 flex items-center justify-center text-gray-500 group-hover:border-white/25 group-hover:text-white group-hover:bg-white/4 transition-all duration-300">
             <svg
               width="12" height="12" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" strokeWidth="2.5"
