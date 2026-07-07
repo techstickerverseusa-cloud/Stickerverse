@@ -11,32 +11,37 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  async rewrites() {
+  async redirects() {
     return [
-      // Shopify checkout, payment, account, orders
       {
         source: "/checkout/:path*",
         destination: `https://${SHOPIFY_STORE}/checkout/:path*`,
+        permanent: false,
       },
       {
         source: "/:shopId(\\d+)/invoices/:path*",
         destination: `https://${SHOPIFY_STORE}/:shopId/invoices/:path*`,
+        permanent: false,
       },
       {
         source: "/:shopId(\\d+)/payments/:path*",
         destination: `https://${SHOPIFY_STORE}/:shopId/payments/:path*`,
+        permanent: false,
       },
       {
         source: "/account/:path*",
         destination: `https://${SHOPIFY_STORE}/account/:path*`,
+        permanent: false,
       },
       {
         source: "/orders/:path*",
         destination: `https://${SHOPIFY_STORE}/orders/:path*`,
+        permanent: false,
       },
       {
         source: "/payments/:path*",
         destination: `https://${SHOPIFY_STORE}/payments/:path*`,
+        permanent: false,
       },
     ];
   },
