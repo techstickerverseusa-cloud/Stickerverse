@@ -12,20 +12,17 @@ const nextConfig: NextConfig = {
     ],
   },
   async redirects() {
+    const SHOP_ID = "78810906940";
     return [
+      // Catch all routes containing the Shopify store ID
+      {
+        source: `/${SHOP_ID}/:path*`,
+        destination: `https://${SHOPIFY_STORE}/${SHOP_ID}/:path*`,
+        permanent: false,
+      },
       {
         source: "/checkout/:path*",
         destination: `https://${SHOPIFY_STORE}/checkout/:path*`,
-        permanent: false,
-      },
-      {
-        source: "/:shopId(\\d+)/invoices/:path*",
-        destination: `https://${SHOPIFY_STORE}/:shopId/invoices/:path*`,
-        permanent: false,
-      },
-      {
-        source: "/:shopId(\\d+)/payments/:path*",
-        destination: `https://${SHOPIFY_STORE}/:shopId/payments/:path*`,
         permanent: false,
       },
       {
