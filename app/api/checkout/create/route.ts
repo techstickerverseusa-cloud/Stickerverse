@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
         { key: "Size",          value: item.size },
         { key: "Quantity Tier", value: String(item.tierQty) },
       ];
+      if (item.finish)       attrs.push({ key: "Finish",        value: item.finish });
       if (item.cutType)      attrs.push({ key: "Cut Type",      value: item.cutType });
       if (item.customWidth)  attrs.push({ key: "Custom Width",  value: `${item.customWidth} in` });
       if (item.customHeight) attrs.push({ key: "Custom Height", value: `${item.customHeight} in` });
@@ -55,6 +56,15 @@ export async function POST(req: NextRequest) {
       const designFileUrl = item.proof?.designUrl ?? item.fileUrl;
       if (designFileUrl && !designFileUrl.startsWith("data:")) {
         attrs.push({ key: "Design File URL", value: designFileUrl });
+      }
+
+      // Real vector cutline for the Graphtec cutter — separate from the
+      // raster proof preview above.
+      if (item.proof?.cutFileUrl) {
+        attrs.push({ key: "Cut File (SVG)", value: item.proof.cutFileUrl });
+      }
+      if (item.proof?.productionPdfUrl) {
+        attrs.push({ key: "Production File (PDF)", value: item.proof.productionPdfUrl });
       }
 
       if (item.proof) {

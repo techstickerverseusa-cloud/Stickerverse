@@ -12,6 +12,10 @@ export interface ProofResult {
   originalUrl: string;
   shopifyUrl: string | null;
   designUrl: string | null;
+  /** Vector cutline (customer-editable SVG) for the Graphtec cutter — separate from the raster preview above. */
+  cutFileUrl: string | null;
+  /** Production-ready PDF: artwork + vector CutContour path, for Illustrator/Cutting Master. */
+  productionPdfUrl: string | null;
   borderThickness: BorderThickness;
   removedBackground: boolean;
   shape: ShapeId;
@@ -25,6 +29,9 @@ interface Props {
   file: File;
   initialShape: ShapeId;
   material: string;
+  /** Physical size (inches) the sticker is printed at, if already chosen — used to scale the vector cut-line offset accurately. */
+  widthIn?: number;
+  heightIn?: number;
   onApprove: (proof: ProofResult) => void;
   onClose: (changeNote?: string) => void;
 }
@@ -76,7 +83,7 @@ function getClipStyle(shape: ShapeId, fitMode: FitMode, rc: RoundedCorners): Rea
   }
 }
 
-export default function PreflightModal({ file, initialShape, material, onApprove, onClose }: Props) {
+export default function PreflightModal({ file, initialShape, material, widthIn, heightIn, onApprove, onClose }: Props) {
   const [uploadStatus, setUploadStatus] = useState<"loading" | "ready" | "error">("loading");
   const [progress, setProgress] = useState(0);
   const [processedUrl, setProcessedUrl] = useState("");
@@ -472,6 +479,8 @@ export default function PreflightModal({ file, initialShape, material, onApprove
                       setIsSaving(true);
                       let shopifyUrl: string | null = null;
                       let designUrl: string | null = null;
+                      let cutFileUrl: string | null = null;
+                      let productionPdfUrl: string | null = null;
                       try {
                         const blob = await fetch(processedUrl).then((r) => r.blob());
                         const fd = new FormData();
@@ -482,15 +491,22 @@ export default function PreflightModal({ file, initialShape, material, onApprove
                         fd.append("roundedCorners", roundedCorners);
                         fd.append("removedBackground", String(removedBg));
                         fd.append("fileName", file.name);
+                        if (widthIn) fd.append("widthIn", String(widthIn));
+                        if (heightIn) fd.append("heightIn", String(heightIn));
                         const resp2 = await fetch("/api/proof", { method: "POST", body: fd });
-                        const data2 = (await resp2.json()) as { shopifyUrl?: string | null; designUrl?: string | null };
+                        const data2 = (await resp2.json()) as {
+                          shopifyUrl?: string | null; designUrl?: string | null;
+                          cutFileUrl?: string | null; productionPdfUrl?: string | null;
+                        };
                         shopifyUrl = data2.shopifyUrl ?? null;
                         designUrl = data2.designUrl ?? null;
+                        cutFileUrl = data2.cutFileUrl ?? null;
+                        productionPdfUrl = data2.productionPdfUrl ?? null;
                       } catch {
                         // non-fatal — approve without shopifyUrl
                       }
                       setIsSaving(false);
-                      onApprove({ processedUrl, originalUrl, shopifyUrl, designUrl, borderThickness: border, removedBackground: removedBg, shape, fitMode, roundedCorners, cutlineColor, bgColor });
+                      onApprove({ processedUrl, originalUrl, shopifyUrl, designUrl, cutFileUrl, productionPdfUrl, borderThickness: border, removedBackground: removedBg, shape, fitMode, roundedCorners, cutlineColor, bgColor });
                     }}
                     disabled={uploadStatus !== "ready" || isSaving}
                     className="w-full py-3.5 text-sm font-bold tracking-[0.15em] uppercase bg-[#22c55e] text-black hover:bg-[#16a34a] active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"

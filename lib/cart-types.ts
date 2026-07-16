@@ -27,6 +27,7 @@ export interface VinylStickerCartItem extends CartItemBase {
   cutType?: string;
   shape: string;
   material: string;
+  finish?: string;
   size: string;
   customWidth?: number;
   customHeight?: number;
@@ -41,6 +42,10 @@ export interface VinylStickerCartItem extends CartItemBase {
     proofUrl?: string;
     cutlineUrl?: string;
     designUrl?: string;
+    /** Vector cutline (SVG) for the Graphtec cutter — the real production cut path, not the raster preview. */
+    cutFileUrl?: string;
+    /** Production PDF: artwork + vector CutContour path, ready for Illustrator/Cutting Master. */
+    productionPdfUrl?: string;
     shape: string;
     fitMode: string;
     borderThickness: string;

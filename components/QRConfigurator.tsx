@@ -208,6 +208,7 @@ export default function QRConfigurator() {
         quantity: activeQty,
         shape: "rectangle",
         material: `qr-${material}`,
+        finish,
         size: sizeId === "custom" ? "custom" : sizeId,
         customWidth: sizeId === "custom" && customW ? Number(customW) : undefined,
         customHeight: sizeId === "custom" && customH ? Number(customH) : undefined,

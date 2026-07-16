@@ -359,7 +359,7 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
       cutType,
       title: config.title,
       subtitle: `${materialLabel} · ${cutType} · ${sizeLabel} · Qty ${activeQty}`,
-      thumbnail: "", unitLabel: "stickers", totalPrice: activeTotal, quantity: activeQty,
+      thumbnail: proofResult?.shopifyUrl ?? proofResult?.designUrl ?? "", unitLabel: "stickers", totalPrice: activeTotal, quantity: activeQty,
       shape, material,
       size: sizeId === "custom" ? "custom" : sizeId,
       customWidth:  sizeId === "custom" && customW ? Number(customW) : undefined,
@@ -374,6 +374,8 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
             proofUrl:          proofResult.shopifyUrl ?? undefined,
             cutlineUrl:        proofResult.shopifyUrl ?? undefined,
             designUrl:         proofResult.designUrl  ?? undefined,
+            cutFileUrl:        proofResult.cutFileUrl ?? undefined,
+            productionPdfUrl:  proofResult.productionPdfUrl ?? undefined,
             shape:             proofResult.shape,
             fitMode:           proofResult.fitMode,
             borderThickness:   proofResult.borderThickness,
@@ -462,6 +464,8 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
           file={file}
           initialShape={shapeToPreflightId[shape]}
           material={material}
+          widthIn={sizeId === "custom" ? (parseFloat(customW) || undefined) : parseFloat(sizeId.match(/^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/)?.[1] ?? "") || undefined}
+          heightIn={sizeId === "custom" ? (parseFloat(customH) || undefined) : parseFloat(sizeId.match(/^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/)?.[2] ?? "") || undefined}
           onApprove={(proof) => { setProofResult(proof); setPreflightOpen(false); }}
           onClose={(note) => {
             setPreflightOpen(false);

@@ -251,7 +251,7 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
       kind: "vinyl-sticker",
       title: product.title,
       subtitle: `${MATERIALS.find((m) => m.id === material)?.label} · ${sizeLabel} · ${shape}`,
-      thumbnail: product.featuredImage?.url ?? "",
+      thumbnail: proofResult?.shopifyUrl ?? proofResult?.designUrl ?? product.featuredImage?.url ?? "",
       unitLabel: "stickers",
       totalPrice: activeTotal,
       quantity: activeTier.qty,
@@ -272,6 +272,8 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
             proofUrl: proofResult.shopifyUrl ?? undefined,
             cutlineUrl: proofResult.shopifyUrl ?? undefined,
             designUrl: proofResult.designUrl ?? undefined,
+            cutFileUrl: proofResult.cutFileUrl ?? undefined,
+            productionPdfUrl: proofResult.productionPdfUrl ?? undefined,
             shape: proofResult.shape,
             fitMode: proofResult.fitMode,
             borderThickness: proofResult.borderThickness,
@@ -294,6 +296,8 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
         file={file}
         initialShape={shape as PreflightShapeId}
         material={material}
+        widthIn={sizeId === "custom" ? (Number(customW) || undefined) : Number(sizeId.split("x")[0])}
+        heightIn={sizeId === "custom" ? (Number(customH) || undefined) : Number(sizeId.split("x")[1])}
         onApprove={(proof) => {
           setProofResult(proof);
           setShape(proof.shape as ShapeId);

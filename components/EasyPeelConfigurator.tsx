@@ -108,12 +108,13 @@ export default function EasyPeelConfigurator() {
       cutType,
       title: "Easy Peel Stickers",
       subtitle: `Easy Peel · ${finish} · ${cutLabel} · ${sizeLabel} · Qty ${activeQty}`,
-      thumbnail: "",
+      thumbnail: proofResult?.shopifyUrl ?? proofResult?.designUrl ?? "",
       unitLabel: "stickers",
       totalPrice: activeTotal,
       quantity: activeQty,
       shape,
       material: "easy-peel",
+      finish,
       size: sizeId === "custom" ? "custom" : sizeId,
       customWidth: sizeId === "custom" && customW ? Number(customW) : undefined,
       customHeight: sizeId === "custom" && customH ? Number(customH) : undefined,
@@ -129,6 +130,8 @@ export default function EasyPeelConfigurator() {
             proofUrl: proofResult.shopifyUrl ?? undefined,
             cutlineUrl: proofResult.shopifyUrl ?? undefined,
             designUrl: proofResult.designUrl ?? undefined,
+            cutFileUrl: proofResult.cutFileUrl ?? undefined,
+            productionPdfUrl: proofResult.productionPdfUrl ?? undefined,
             shape: proofResult.shape,
             fitMode: proofResult.fitMode,
             borderThickness: proofResult.borderThickness,
@@ -182,6 +185,8 @@ export default function EasyPeelConfigurator() {
           file={file}
           initialShape={shapeToPreflightId[shape]}
           material="easy peel"
+          widthIn={dims?.w}
+          heightIn={dims?.h}
           onApprove={(proof) => { setProofResult(proof); setPreflightOpen(false); }}
           onClose={(note) => {
             setPreflightOpen(false);

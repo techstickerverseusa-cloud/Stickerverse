@@ -153,12 +153,13 @@ export default function VinylConfigurator({ initialMaterial = "vinyl" }: { initi
       cutType,
       title: "Vinyl Stickers",
       subtitle: `${materialTag} · ${finish} · ${cutLabel} · ${sizeLabel} · Qty ${activeQty}`,
-      thumbnail: "",
+      thumbnail: proofResult?.shopifyUrl ?? proofResult?.designUrl ?? "",
       unitLabel: "stickers",
       totalPrice: activeTotal,
       quantity: activeQty,
       shape,
       material: material === "vinyl" ? `${vinylTier}-vinyl` : material,
+      finish,
       size: sizeId === "custom" ? "custom" : sizeId,
       customWidth: sizeId === "custom" && customW ? Number(customW) : undefined,
       customHeight: sizeId === "custom" && customH ? Number(customH) : undefined,
@@ -174,6 +175,8 @@ export default function VinylConfigurator({ initialMaterial = "vinyl" }: { initi
             proofUrl: proofResult.shopifyUrl ?? undefined,
             cutlineUrl: proofResult.shopifyUrl ?? undefined,
             designUrl: proofResult.designUrl ?? undefined,
+            cutFileUrl: proofResult.cutFileUrl ?? undefined,
+            productionPdfUrl: proofResult.productionPdfUrl ?? undefined,
             shape: proofResult.shape,
             fitMode: proofResult.fitMode,
             borderThickness: proofResult.borderThickness,
@@ -232,6 +235,8 @@ export default function VinylConfigurator({ initialMaterial = "vinyl" }: { initi
           file={file}
           initialShape={shapeToPreflightId[shape]}
           material={material === "vinyl" ? `${vinylTier} vinyl` : material}
+          widthIn={dims?.w}
+          heightIn={dims?.h}
           onApprove={(proof) => { setProofResult(proof); setPreflightOpen(false); }}
           onClose={(note) => {
             setPreflightOpen(false);

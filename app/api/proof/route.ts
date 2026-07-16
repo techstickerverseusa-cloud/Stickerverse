@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { uploadFileToShopify } from "@/lib/shopify-admin";
+import { buildCutPath, buildCutSvg, buildCutPdf, type CutShape, type CutFitMode, type CutRoundedCorners } from "@/lib/cut-path";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -150,6 +151,8 @@ export async function POST(req: NextRequest) {
     const roundedCorners = ((formData.get("roundedCorners") as string) || "none") as RoundedCorners;
     const removedBackground = formData.get("removedBackground") === "true";
     const fileName = (formData.get("fileName") as string) || "sticker.png";
+    const widthIn = parseFloat((formData.get("widthIn") as string) || "") || undefined;
+    const heightIn = parseFloat((formData.get("heightIn") as string) || "") || undefined;
 
     const buf = Buffer.from(await file.arrayBuffer());
     const mime = file.type || "image/png";
@@ -157,6 +160,8 @@ export async function POST(req: NextRequest) {
 
     let shopifyUrl: string | null = null;
     let designUrl: string | null = null;
+    let cutFileUrl: string | null = null;
+    let productionPdfUrl: string | null = null;
 
     if (mime.startsWith("image/") && mime !== "image/svg+xml") {
       const sharpLib = (await import("sharp")).default;
@@ -185,6 +190,33 @@ export async function POST(req: NextRequest) {
         uploadFileToShopify(buf, `${baseName}_design.png`, "image/png").catch(() => null),
         uploadFileToShopify(proofForAdmin, `${baseName}_${shape}_proof.png`, "image/png").catch(() => null),
       ]);
+
+      // Production cut path — the real vector cutline for the Graphtec
+      // cutter, separate from the raster preview above. Best-effort: a
+      // failure here must never block proof approval.
+      try {
+        const cut = await buildCutPath({
+          buf,
+          shape: shape as CutShape,
+          fitMode: fitMode as CutFitMode,
+          roundedCorners: roundedCorners as CutRoundedCorners,
+          removedBackground,
+          widthIn,
+          heightIn,
+        });
+        if (cut.pathD.length && cut.width && cut.height) {
+          const pngDataUri = `data:image/png;base64,${buf.toString("base64")}`;
+          const svg = buildCutSvg(pngDataUri, cut.width, cut.height, cut.pathD);
+          const pdfBuf = await buildCutPdf(buf, cut.width, cut.height, cut.pathD);
+          [cutFileUrl, productionPdfUrl] = await Promise.all([
+            uploadFileToShopify(Buffer.from(svg, "utf-8"), `${baseName}_${shape}_cutline.svg`, "image/svg+xml").catch((e) => { console.error("[/api/proof] cutFile upload failed", e); return null; }),
+            uploadFileToShopify(pdfBuf, `${baseName}_${shape}_cutline.pdf`, "application/pdf").catch((e) => { console.error("[/api/proof] productionPdf upload failed", e); return null; }),
+          ]);
+        }
+      } catch (err) {
+        // non-fatal — proof still stands without a production cut file
+        console.error("[/api/proof] cut-path generation failed", err);
+      }
     } else {
       try {
         const ext = fileName.match(/\.[^.]+$/)?.[0] ?? "";
@@ -193,7 +225,7 @@ export async function POST(req: NextRequest) {
       } catch { /* non-fatal */ }
     }
 
-    return NextResponse.json({ shopifyUrl, designUrl });
+    return NextResponse.json({ shopifyUrl, designUrl, cutFileUrl, productionPdfUrl });
   } catch (err) {
     console.error("[/api/proof]", err);
     return NextResponse.json({ error: "Proof generation failed" }, { status: 500 });

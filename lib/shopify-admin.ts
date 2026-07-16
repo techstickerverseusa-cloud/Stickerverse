@@ -139,6 +139,10 @@ export async function uploadFileToShopify(
   if (!upResp.ok) return null;
 
   // 3. Create file in Shopify — get file ID
+  // contentType must match the resource: images become a MediaImage (with a
+  // processed `image.url`), everything else (PDF, SVG, ...) must be "FILE"
+  // or Shopify creates a broken/empty node.
+  const shopifyContentType = mimeType.startsWith("image/") && mimeType !== "image/svg+xml" ? "IMAGE" : "FILE";
   const createResp = await fetch(base, {
     method: "POST",
     headers,
@@ -156,7 +160,7 @@ export async function uploadFileToShopify(
           }
         }
       `,
-      variables: { files: [{ originalSource: target.resourceUrl, contentType: "IMAGE" }] },
+      variables: { files: [{ originalSource: target.resourceUrl, contentType: shopifyContentType }] },
     }),
     cache: "no-store",
   });
