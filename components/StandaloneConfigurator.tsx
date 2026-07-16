@@ -23,7 +23,7 @@ const TYPE_CONFIG: Record<StickerType, {
   basePrice: number; accent: string; accentRgb: string; features: string[];
 }> = {
   vinyl: {
-    title: "Vinyl Stickers", subtitle: "Perfect for any application. The perfect sticker.",
+    title: "Vinyl Stickers", subtitle: "Vibrant, Durable, Professional.",
     description: "Premium vinyl stickers perfect for laptops, water bottles, and outdoor use — waterproof, scratch-resistant, and dishwasher safe.",
     materials: ["matte", "gloss"], defaultMaterial: "matte", basePrice: 2.00,
     accent: "#6366f1", accentRgb: "99,102,241",

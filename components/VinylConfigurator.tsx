@@ -271,7 +271,7 @@ export default function VinylConfigurator({ initialMaterial = "vinyl" }: { initi
                 Vinyl Stickers
               </h1>
               <p style={{ color: `rgba(${ACCENT_RGB},0.85)`, fontSize: "0.875rem", fontWeight: 600, marginTop: "0.4rem" }}>
-                Perfect for any application. The perfect sticker.
+                Vibrant, Durable, Professional.
               </p>
             </div>
           </div>
