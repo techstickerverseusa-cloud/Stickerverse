@@ -242,7 +242,7 @@ export default function PreflightModal({ file, initialShape, material, onApprove
             {/* Header */}
             <div>
               <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-[8px] tracking-[0.5em] uppercase text-[#00ff44] font-bold" style={{ fontFamily: "var(--font-orbitron)" }}>Preflight</span>
+                <span className="text-[8px] tracking-[0.5em] uppercase text-[#00ff44] font-bold" style={{ fontFamily: "var(--font-orbitron)" }}>Mission Launch</span>
                 <div className="h-px flex-1 bg-[#00ff44]/20" />
                 <span className="text-[8px] px-1.5 py-0.5 border border-white/10 text-gray-600 tracking-wider">Beta</span>
               </div>
@@ -515,10 +515,10 @@ export default function PreflightModal({ file, initialShape, material, onApprove
               )}
             </div>
 
-            {/* What is Preflight */}
-            <div className="border-t border-white/[0.05] pt-4">
+            {/* What is Mission Launch */}
+            <div className="border-t border-white/5 pt-4">
               <p className="text-[8px] font-bold tracking-[0.4em] uppercase text-yellow-400/70 mb-2" style={{ fontFamily: "var(--font-orbitron)" }}>
-                What is Preflight?
+                What is Mission Launch?
               </p>
               <p className="text-[10px] text-gray-600 leading-relaxed">
                 Automated proof system. We process your file and show a cutline preview. A human reviews every order before printing.
