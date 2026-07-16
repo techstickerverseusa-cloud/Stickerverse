@@ -28,7 +28,7 @@ type MaterialId = "matte" | "gloss" | "holographic" | "chrome";
 type SizeId = "2x2" | "3x3" | "4x4" | "5x5" | "custom";
 
 const SHAPES: { id: ShapeId; label: string }[] = [
-  { id: "die-cut", label: "Die Cut" },
+  { id: "die-cut", label: "Custom Shape" },
   { id: "circle", label: "Circle" },
   { id: "oval", label: "Oval" },
   { id: "square", label: "Square" },
@@ -461,7 +461,7 @@ export default function StickerConfigurator({ product }: { product: ShopifyProdu
           <Section num="01" title="Select a Cut Type">
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: "die-cut"  as CutType, label: "Die Cut",   desc: "Cut through the backing — sticker follows your artwork's exact shape." },
+                { id: "die-cut"  as CutType, label: "Contour Cut",   desc: "Cut through the backing — sticker follows your artwork's exact shape." },
                 { id: "kiss-cut" as CutType, label: "Kiss Cut",  desc: "Surface layer only — sticker sits on a square backing sheet." },
               ].map((ct) => (
                 <button

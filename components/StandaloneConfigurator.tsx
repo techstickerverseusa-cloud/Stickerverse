@@ -610,7 +610,7 @@ export default function StandaloneConfigurator({ stickerType }: { stickerType: S
                   boxShadow: `0 0 14px rgba(${accentRgb},0.4)`,
                 }} />
                 {([
-                  { id: "die-cut"  as CutType, label: "Die Cut",  sub: "Shape-cut" },
+                  { id: "die-cut"  as CutType, label: "Contour Cut",  sub: "Shape-cut" },
                   { id: "kiss-cut" as CutType, label: "Kiss Cut", sub: "On backing" },
                 ]).map((ct) => (
                   <button key={ct.id} onClick={() => setCutType(ct.id)}
