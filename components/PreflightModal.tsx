@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export type BorderThickness = "thin" | "normal" | "wide";
 export type ShapeId = "die-cut" | "circle" | "oval" | "square" | "rectangle";
@@ -97,6 +97,8 @@ export default function PreflightModal({ file, initialShape, material, widthIn, 
   const [processedUrl, setProcessedUrl] = useState("");
   const [originalUrl, setOriginalUrl] = useState("");
   const [removedBg, setRemovedBg] = useState(false);
+  const [bgStatus, setBgStatus] = useState<"processing" | "done" | "skipped" | "failed">("processing");
+  const abortRef = useRef<AbortController | null>(null);
 
   const [shape, setShape] = useState<ShapeId>(initialShape);
   const [fitMode, setFitMode] = useState<FitMode>("edge");
@@ -117,28 +119,43 @@ export default function PreflightModal({ file, initialShape, material, widthIn, 
     setOriginalUrl(objectUrl);
     setProgress(100);
     setUploadStatus("ready");
+    setBgStatus("processing");
 
     // In background: attempt background removal (non-blocking)
     const controller = new AbortController();
+    abortRef.current = controller;
     const deadline = setTimeout(() => controller.abort(), 20_000);
+    // React (dev/Strict Mode) runs this effect's cleanup + a fresh copy back
+    // to back on mount — that cleanup's abort() must not let THIS instance's
+    // catch handler mark bgStatus "failed" out from under the real, still-
+    // running second instance. `cancelled` scopes the guard to this instance.
+    let cancelled = false;
 
     (async () => {
       try {
         const fd = new FormData();
         fd.append("file", file);
         const resp = await fetch("/api/upload", { method: "POST", body: fd, signal: controller.signal });
-        if (!resp.ok) return;
+        if (cancelled) return;
+        if (!resp.ok) { setBgStatus((prev) => (prev === "processing" ? "failed" : prev)); return; }
         const data = await resp.json() as { processedUrl: string | null; removedBackground: boolean };
+        if (cancelled) return;
         if (data.processedUrl) setProcessedUrl(data.processedUrl);
         setRemovedBg(data.removedBackground ?? false);
+        setBgStatus((prev) => (prev === "processing" ? "done" : prev));
       } catch {
-        // timeout, network error, or no REMOVE_BG key — keep showing original, that's fine
+        // timeout, network error, no REMOVE_BG key, user skipped, or this
+        // effect instance was cleaned up — only mark "failed" when it's a
+        // real failure of the instance that's still current
+        if (cancelled) return;
+        setBgStatus((prev) => (prev === "processing" ? "failed" : prev));
       } finally {
         clearTimeout(deadline);
       }
     })();
 
     return () => {
+      cancelled = true;
       controller.abort();
       clearTimeout(deadline);
       URL.revokeObjectURL(objectUrl);
@@ -149,6 +166,12 @@ export default function PreflightModal({ file, initialShape, material, widthIn, 
   const showRoundedCorners = !isEdge && (shape === "square" || shape === "rectangle");
   const { w, h } = getContainerSize(shape, zoom);
   const clipStyle = getClipStyle(shape, fitMode, roundedCorners);
+
+  function handleSkipBgRemoval() {
+    abortRef.current?.abort();
+    setRemovedBg(false);
+    setBgStatus("skipped");
+  }
 
   const SHAPES: ShapeId[] = ["die-cut", "circle", "oval", "square", "rectangle"];
   const SHAPE_LABELS: Record<ShapeId, string> = { "die-cut": "Die", circle: "Circle", oval: "Oval", square: "Square", rectangle: "Rect" };
@@ -441,7 +464,23 @@ export default function PreflightModal({ file, initialShape, material, widthIn, 
             </div>
 
             {/* Background status */}
-            {uploadStatus === "ready" && (
+            {uploadStatus === "ready" && bgStatus === "processing" && (
+              <div className="flex items-start gap-2.5 p-3 border border-white/10 bg-white/[0.02]">
+                <div className="w-[11px] h-[11px] mt-0.5 border-2 border-white/15 border-t-white/50 rounded-full animate-spin flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-[10px] text-gray-400 leading-relaxed">
+                    Removing background…
+                  </p>
+                  <button
+                    onClick={handleSkipBgRemoval}
+                    className="text-[10px] text-gray-500 hover:text-white underline underline-offset-2 mt-1 transition-colors"
+                  >
+                    Don&apos;t remove background
+                  </button>
+                </div>
+              </div>
+            )}
+            {uploadStatus === "ready" && bgStatus !== "processing" && (
               <div className={`flex items-start gap-2.5 p-3 border ${removedBg ? "border-green-500/20 bg-green-500/[0.03]" : "border-yellow-500/20 bg-yellow-500/[0.02]"}`}>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={removedBg ? "#22c55e" : "#eab308"} strokeWidth="2.5" className="flex-shrink-0 mt-0.5">
                   {removedBg
@@ -452,6 +491,8 @@ export default function PreflightModal({ file, initialShape, material, widthIn, 
                 <p className="text-[10px] text-gray-500 leading-relaxed">
                   {removedBg
                     ? isSimple ? "Background removed." : "Background removed. Green line = cutline."
+                    : bgStatus === "skipped"
+                    ? "Background removal skipped. Image prints as-is."
                     : "No background removal. Image prints as-is."}
                 </p>
               </div>
@@ -489,7 +530,7 @@ export default function PreflightModal({ file, initialShape, material, widthIn, 
                 <>
                   <button
                     onClick={async () => {
-                      if (uploadStatus !== "ready" || isSaving) return;
+                      if (uploadStatus !== "ready" || isSaving || bgStatus === "processing") return;
                       setIsSaving(true);
                       let shopifyUrl: string | null = null;
                       let designUrl: string | null = null;
@@ -523,7 +564,7 @@ export default function PreflightModal({ file, initialShape, material, widthIn, 
                       setIsSaving(false);
                       onApprove({ processedUrl, originalUrl, shopifyUrl, designUrl, cutFileUrl, productionPdfUrl, borderThickness: border, removedBackground: removedBg, shape, fitMode, roundedCorners, cutlineColor, bgColor });
                     }}
-                    disabled={uploadStatus !== "ready" || isSaving}
+                    disabled={uploadStatus !== "ready" || isSaving || bgStatus === "processing"}
                     className="w-full py-3.5 text-sm font-bold tracking-[0.15em] uppercase bg-[#22c55e] text-black hover:bg-[#16a34a] active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     style={{ fontFamily: "var(--font-orbitron)" }}
                   >

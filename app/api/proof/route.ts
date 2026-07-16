@@ -169,11 +169,20 @@ export async function POST(req: NextRequest) {
     if (mime.startsWith("image/") && mime !== "image/svg+xml") {
       const sharpLib = (await import("sharp")).default;
 
-      let proofBuf: Buffer = buf;
+      // Normalize to a real PNG up front — everything downstream (proof
+      // compositing, cut-path generation, pdf-lib's embedPng) assumes PNG
+      // bytes, but the uploaded file (or the original when background
+      // removal was skipped/unavailable) may be a JPEG/WebP/etc.
+      let pngBuf: Buffer = buf;
+      try {
+        pngBuf = await sharpLib(buf).png().toBuffer();
+      } catch { /* not a raster image sharp can decode — fall through with raw buf */ }
+
+      let proofBuf: Buffer = pngBuf;
       if (!skipCutline) {
         try {
-          proofBuf = await generateProof(buf, shape, fitMode, borderThickness, roundedCorners, removedBackground);
-        } catch { /* use raw buf as fallback */ }
+          proofBuf = await generateProof(pngBuf, shape, fitMode, borderThickness, roundedCorners, removedBackground);
+        } catch { /* use pngBuf as fallback */ }
       }
 
       // Composite proof over white background so the cutline is clearly visible
@@ -192,7 +201,7 @@ export async function POST(req: NextRequest) {
       } catch { /* use proofBuf as-is */ }
 
       [designUrl, shopifyUrl] = await Promise.all([
-        uploadFileToShopify(buf, `${baseName}_design.png`, "image/png").catch(() => null),
+        uploadFileToShopify(pngBuf, `${baseName}_design.png`, "image/png").catch(() => null),
         uploadFileToShopify(proofForAdmin, `${baseName}_${shape}_proof.png`, "image/png").catch(() => null),
       ]);
 
@@ -203,7 +212,7 @@ export async function POST(req: NextRequest) {
       if (!skipCutline) {
         try {
           const cut = await buildCutPath({
-            buf,
+            buf: pngBuf,
             shape: shape as CutShape,
             fitMode: fitMode as CutFitMode,
             roundedCorners: roundedCorners as CutRoundedCorners,
@@ -212,9 +221,9 @@ export async function POST(req: NextRequest) {
             heightIn,
           });
           if (cut.pathD.length && cut.width && cut.height) {
-            const pngDataUri = `data:image/png;base64,${buf.toString("base64")}`;
+            const pngDataUri = `data:image/png;base64,${pngBuf.toString("base64")}`;
             const svg = buildCutSvg(pngDataUri, cut.width, cut.height, cut.pathD);
-            const pdfBuf = await buildCutPdf(buf, cut.width, cut.height, cut.pathD);
+            const pdfBuf = await buildCutPdf(pngBuf, cut.width, cut.height, cut.pathD);
             [cutFileUrl, productionPdfUrl] = await Promise.all([
               uploadFileToShopify(Buffer.from(svg, "utf-8"), `${baseName}_${shape}_cutline.svg`, "image/svg+xml").catch((e) => { console.error("[/api/proof] cutFile upload failed", e); return null; }),
               uploadFileToShopify(pdfBuf, `${baseName}_${shape}_cutline.pdf`, "application/pdf").catch((e) => { console.error("[/api/proof] productionPdf upload failed", e); return null; }),
