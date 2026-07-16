@@ -36,27 +36,6 @@ const VALUES = [
   },
 ];
 
-const TEAM = [
-  {
-    initials: "JV",
-    name:     "Josh Vargas",
-    role:     "Founder & CEO",
-    bio:      "Josh started Stickerverse in his garage with a single plotter and a vision to make premium custom stickers accessible to everyone.",
-  },
-  {
-    initials: "ML",
-    name:     "Maria Lopez",
-    role:     "Head of Production",
-    bio:      "With 10+ years in print production, Maria ensures every single order meets our exacting quality standards before it leaves the building.",
-  },
-  {
-    initials: "TN",
-    name:     "Tyler Nash",
-    role:     "Customer Success",
-    bio:      "Tyler and his team are obsessed with making sure every customer is thrilled with their order — from first proof to final delivery.",
-  },
-];
-
 export default function AboutPage() {
   return (
     <main className="overflow-x-hidden">
@@ -183,7 +162,7 @@ export default function AboutPage() {
                 <span className="text-shimmer"> professional-grade custom stickers</span>
                 &nbsp;— without the professional-grade price tag.&rdquo;
               </blockquote>
-              <p className="text-gray-500 text-sm mt-6">— Josh Vargas, Founder</p>
+              <p className="text-gray-500 text-sm mt-6">— Founder, Stickerverse USA</p>
             </div>
           </div>
         </div>
@@ -229,58 +208,6 @@ export default function AboutPage() {
                 </h3>
                 <p className="text-gray-500 text-xs leading-6">{v.desc}</p>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Team ── */}
-      <section className="px-6 py-16">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-3 mb-5">
-            <span className="w-8 h-px bg-gradient-to-r from-transparent to-white/20" />
-            <span className="text-[8px] tracking-[0.5em] uppercase text-gray-500"
-              style={{ fontFamily: "var(--font-orbitron)" }}>
-              The People Behind It
-            </span>
-            <span className="w-8 h-px bg-gradient-to-l from-transparent to-white/20" />
-          </div>
-          <h2
-            className="text-2xl md:text-4xl font-bold text-white"
-            style={{ fontFamily: "var(--font-orbitron)" }}
-          >
-            Meet the Team
-          </h2>
-        </div>
-
-        <div className="grid sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
-          {TEAM.map((member, i) => (
-            <div
-              key={member.name}
-              className="group border border-white/[0.07] hover:border-white/[0.18] bg-white/[0.015] hover:bg-white/[0.03] p-7 text-center transition-all duration-400 hover:-translate-y-1 animate-fade-up"
-              style={{ animationDelay: `${i * 100}ms`, animationFillMode: "both" }}
-            >
-              {/* Avatar */}
-              <div className="w-16 h-16 border border-white/[0.1] flex items-center justify-center mx-auto mb-5 group-hover:border-white/25 transition-all duration-300 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-[rgba(100,80,220,0.15)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
-                <span
-                  className="text-lg font-bold text-gray-400 group-hover:text-white transition-colors duration-300 relative"
-                  style={{ fontFamily: "var(--font-orbitron)" }}
-                >
-                  {member.initials}
-                </span>
-              </div>
-              <h3
-                className="text-xs font-bold tracking-[0.1em] uppercase text-white mb-1"
-                style={{ fontFamily: "var(--font-orbitron)" }}
-              >
-                {member.name}
-              </h3>
-              <p className="text-[9px] tracking-[0.3em] uppercase text-gray-600 mb-4"
-                style={{ fontFamily: "var(--font-orbitron)" }}>
-                {member.role}
-              </p>
-              <p className="text-gray-500 text-xs leading-5">{member.bio}</p>
             </div>
           ))}
         </div>

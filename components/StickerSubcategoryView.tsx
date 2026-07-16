@@ -10,25 +10,28 @@ const SUBCATEGORIES = [
     glow: "rgba(75,105,230,0.35)",
   },
   {
-    title: "Holographic Stickers",
-    href: "/stickers/holographic",
-    img: "/Holographic Stickers.png",
+    title: "QR Code Stickers",
+    href: "/stickers/qr",
+    icon: (
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <path d="M14 14h3v3h-3zM19 14h2v2h-2zM14 19h2v2h-2zM19 19h2v2h-2z" />
+      </svg>
+    ),
     gradient: "linear-gradient(145deg, #1a0533 0%, #4a1272 40%, #2d0a5c 100%)",
     glow: "rgba(180,80,230,0.35)",
   },
   {
-    title: "Glitter Stickers",
-    href: "/stickers/glitter",
-    img: "/Glitter Stickers.png",
+    title: "Easy Peel Stickers",
+    href: "/stickers/easy-peel",
+    icon: (
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 4h12v12H4z" /><path d="M16 4l4 4v12H8l-4-4" /><path d="M16 4v4h4" />
+      </svg>
+    ),
     gradient: "linear-gradient(145deg, #1c1000 0%, #5c3200 50%, #2a1800 100%)",
     glow: "rgba(230,170,0,0.35)",
-  },
-  {
-    title: "Chrome Stickers",
-    href: "/stickers/chrome",
-    img: "/Chrome Stickers.png",
-    gradient: "linear-gradient(145deg, #111111 0%, #2c2c2c 50%, #111111 100%)",
-    glow: "rgba(180,190,200,0.3)",
   },
   {
     title: "Sticker Sheets",
@@ -79,7 +82,7 @@ export default function StickerSubcategoryView() {
       <div className="max-w-5xl mx-auto">
 
         {/* ── Sub-category cards ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-10">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {SUBCATEGORIES.map((item) => (
             <Link
               key={item.href}
@@ -98,13 +101,19 @@ export default function StickerSubcategoryView() {
                   style={{ background: `radial-gradient(60% 60% at 50% 55%, ${item.glow}, transparent)` }}
                 />
                 <div className="relative w-full h-27.5 group-hover:scale-110 transition-transform duration-400">
-                  <Image
-                    src={item.img}
-                    alt={item.title}
-                    fill
-                    className="object-contain drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)] group-hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.12)]"
-                    unoptimized
-                  />
+                  {item.img ? (
+                    <Image
+                      src={item.img}
+                      alt={item.title}
+                      fill
+                      className="object-contain drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)] group-hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.12)]"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity duration-400 drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]">
+                      {item.icon}
+                    </div>
+                  )}
                 </div>
               </div>
 
